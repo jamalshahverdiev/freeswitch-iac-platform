@@ -15,20 +15,26 @@ Two private repos on GitHub under `github.com/jamalshahverdiev`:
 | `freeswitch-iac-platform` | control-plane/, deploy/, webphone/, docs/, examples/, hack/, docker-compose.yml |
 | `terraform-provider-freeswitch` | current provider/ moved to repo ROOT (internal/, docs/, examples/, GNUmakefile, main.go) — name is the mandatory Terraform convention |
 
+Status: **DONE 2026-06-11.** Both repos pushed (branches
+`first-step-to-fs-provider` / `first-step-to-fs-iac-platform`). Working tree
+moved to /home/jamal/github/freeswitch-iac-platform; compose reuses the same
+postgres volume (same project name) — data intact, api-test 89/89, tofu plans
+clean. Secrets: age-encrypted (`hack/secrets.sh`, key ~/.config/age/keys.txt).
+
 Steps:
-- [ ] Create both repos (private!). HANDOFF.md contains live credentials —
+- [x] Create both repos (private!). HANDOFF.md contains live credentials —
       decide: keep repo private and accept, or move secrets to a vault doc.
-- [ ] Platform: `git init`, verify .gitignore covers `.env`, `deploy/tls/`,
+- [x] Platform: `git init`, verify .gitignore covers `.env`, `deploy/tls/`,
       `deploy/freeswitch/nginx/recordings.htpasswd`, `**/.terraform/`,
       `*.tfstate*`; initial commit; push.
-- [ ] Provider: move `provider/*` to repo root, rename Go module to
+- [x] Provider: move `provider/*` to repo root, rename Go module to
       `github.com/jamalshahverdiev/terraform-provider-freeswitch`, fix imports,
       rebuild, re-run `tofu -chdir=examples/... plan` smoke. Keep the
       dev_overrides binary name `terraform-provider-freeswitch` (unchanged).
-- [ ] Platform repo: drop provider/ dir; README cross-links both repos.
-- [ ] Platform control-plane module rename:
+- [x] Platform repo: drop provider/ dir; README cross-links both repos.
+- [x] Platform control-plane module rename:
       `github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane`.
-- [ ] Examples reference `local/freeswitch` via dev_overrides — document that
+- [x] Examples reference `local/freeswitch` via dev_overrides — document that
       the public Terraform Registry (provider published from GitHub releases
       via goreleaser + GPG, registry address
       `jamalshahverdiev/freeswitch`) is the future publish path.

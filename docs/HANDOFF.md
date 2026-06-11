@@ -5,7 +5,14 @@ state, how to operate the system, every credential/address, the gotchas that
 already bit us, and the concrete next milestones. Pair it with the saved memory
 files and with `docs/architecture.md` + `docs/api.md`.
 
-Date of last update: 2026-05-31.
+Date of last update: 2026-06-11.
+
+**WORKING TREE: `/home/jamal/github/freeswitch-iac-platform`** (git ->
+github.com/jamalshahverdiev/freeswitch-iac-platform). The provider lives in
+`/home/jamal/github/terraform-provider-freeswitch`. The old FS-TF tree is
+deprecated. After a fresh clone: `hack/secrets.sh decrypt`, then
+`docker compose up -d`. Env needed by scripts/examples: FS_SSH_PASS,
+TF_VAR_sip_password, TF_VAR_webrtc_password (values in deploy/SECRETS.md).
 
 ---
 

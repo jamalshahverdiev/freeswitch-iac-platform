@@ -449,6 +449,30 @@ GOTCHAS:
 
 ---
 
+## BACKUP & RECOVERY (Phase 1, done 2026-06-12)
+
+- `hack/backup-postgres.sh` — pg_dump -Fc of freeswitch_control/_callcenter/
+  _core from the compose container + pull of /var/lib/freeswitch/recordings
+  from the FS host (ssh KEY auth — id_ed25519 installed on the server, no
+  password needed). Target: ~/backups/freeswitch/<YYYY-MM-DD>/, retention 14d.
+- Schedule template: `deploy/cron/backup.crontab` (NOT auto-installed; WSL2
+  caveat inside). Install manually via `crontab -e`.
+- `hack/restore-test.sh [date]` — restores the dumps into a scratch postgres:16
+  container and compares 11 row counts against live. Verified 2026-06-12:
+  10/10 (first run) and scripted version. Run it after any backup change.
+
+RECOVERY RUNBOOK (postgres volume lost):
+1. `docker compose up -d postgres` (fresh volume; init creates the 3 DBs and
+   the control-plane will run migrations — but restore BEFORE starting it).
+2. For each db: `docker exec -i <pg> pg_restore -U freeswitch -d <db>
+   --clean --no-owner < ~/backups/freeswitch/<day>/<db>.dump`.
+3. `docker compose up -d` (control-plane, webphone).
+4. FS server: `systemctl restart freeswitch` (re-creates ODBC connections),
+   then `fs_cli -x "reload mod_callcenter"`.
+5. Verify: `bash deploy/api-test.sh` (89), browser re-registers, queue list.
+Recordings restore: copy `<day>/recordings/` back to the FS host
+`/var/lib/freeswitch/recordings/` (chown freeswitch:freeswitch).
+
 ## IMPROVEMENT PLAN (2026-06-11) — READ docs/IMPROVEMENT-PLAN.md FIRST
 
 Next session starts with Phase 0 of docs/IMPROVEMENT-PLAN.md: split into two

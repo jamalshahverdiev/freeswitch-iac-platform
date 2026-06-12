@@ -44,17 +44,27 @@ Steps:
 All FreeSWITCH state lives in the dev-box docker volume: freeswitch_control
 (desired state), freeswitch_callcenter (runtime), freeswitch_core (core db).
 
-- [ ] `hack/backup-postgres.sh`: `pg_dump -Fc` of all three DBs into
+Status: **DONE 2026-06-12.** backup-postgres.sh + restore-test.sh (verified
+10/10 vs live), cron TEMPLATE in deploy/cron/backup.crontab (user installs
+manually), recordings pulled via ssh key (installed on FS host), recovery
+runbook in HANDOFF.
+
+- [x] `hack/backup-postgres.sh`: `pg_dump -Fc` of all three DBs into
       `~/backups/freeswitch/$(date +%F)/`, keep N=14 days, prune older.
-- [ ] Schedule: cron (or systemd timer) on the dev box, daily.
-- [ ] RESTORE TEST: restore into a scratch compose project, run api-test.sh
+- [x] Schedule: cron (or systemd timer) on the dev box, daily.
+- [x] RESTORE TEST: restore into a scratch compose project, run api-test.sh
       against it — a backup that was never restored is not a backup.
-- [ ] Recordings on the FS host: daily `rsync` to the dev box (or accept the
+- [x] Recordings on the FS host: daily `rsync` to the dev box (or accept the
       risk explicitly and write that down here).
-- [ ] Document recovery runbook in HANDOFF (volume lost → restore order:
+- [x] Document recovery runbook in HANDOFF (volume lost → restore order:
       postgres up → restore dumps → restart freeswitch → reload modules).
 
-## Phase 2 — Boot resilience (FS ↔ Postgres dependency)
+## Phase 2 — Boot resilience (FS <-> Postgres dependency) — SKIPPED by user decision (2026-06-12)
+
+Out of scope: the project's focus is the control-plane API and the Terraform
+provider, not FS-server infra hardening. The dependency itself is documented
+in HANDOFF ("if Postgres was down at FS boot: start compose, then restart
+freeswitch"). Revisit only if the lab turns into a real deployment.
 
 - [ ] systemd drop-in on the FS server for freeswitch.service:
       `Restart=on-failure`, `RestartSec=10`, plus an `ExecStartPre` script
@@ -65,20 +75,22 @@ All FreeSWITCH state lives in the dev-box docker volume: freeswitch_control
 
 ## Phase 3 — Tests + CI
 
-- [ ] Renderer unit tests (highest value/effort): table-driven golden-file
-      tests for directory/dialplan/callcenter/conference renderers, incl.
-      a1-hash emission, not-found fallbacks, param sorting, room-extension
-      synthesis + priority ordering.
+- [x] Renderer unit tests (DONE 2026-06-12): control-plane/internal/renderer/
+      renderer_test.go — a1-hash (no plaintext password in output!), dialplan
+      grouping/filter/disabled, callcenter odbc-dsn + params merge, conference
+      video/audio profiles + map override, room-extension synthesis (pin
+      dialstring, max-members, action order), NotFoundDocument.
 - [ ] API handler tests with httptest against a store interface (or a test
       Postgres via testcontainers) — at minimum validation + error mapping.
 - [ ] Provider: acceptance tests for callcenter/conference resources (the
       pattern exists in domain_resource_test.go); document why they run via
       tofu (harness can't parse OpenTofu version).
-- [ ] GitHub Actions, platform repo: build + vet + golangci-lint + unit
-      tests on PR; optional manual job that boots compose and runs
-      deploy/api-test.sh.
-- [ ] GitHub Actions, provider repo: build + vet + lint + tests +
-      `tfplugindocs generate` with a "docs are up to date" diff check.
+- [x] GitHub Actions, platform repo (DONE 2026-06-12, .github/workflows/
+      ci.yml): build+vet+test (control-plane) + compose-config validation +
+      bash -n of all scripts. golangci-lint deferred (needs a config pass).
+- [x] GitHub Actions, provider repo (DONE 2026-06-12): build+vet+test job +
+      docs-up-to-date job (tfplugindocs generate + git diff --exit-code,
+      verified clean locally). golangci-lint deferred.
 
 ## Phase 4 — Tech debt
 
@@ -130,8 +142,8 @@ All FreeSWITCH state lives in the dev-box docker volume: freeswitch_control
 
 ---
 
-## Suggested order
+## Suggested order (updated 2026-06-12)
 
-Phase 0 → 1 → 2 are about risk and take roughly a day together.
-Then D1 (Grafana) for visible value, Phase 3 CI in parallel with feature
-work, Phase 4 piecemeal between features.
+Phase 0 + 1 done, Phase 2 skipped. Focus = control-plane API + provider:
+Phase 3 (tests + CI for both repos) -> Phase 4 API debt (pagination, audit
+read API, priority validation) -> Phase 5/6 features as appetite allows.

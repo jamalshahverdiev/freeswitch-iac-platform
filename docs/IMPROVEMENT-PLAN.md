@@ -80,11 +80,19 @@ freeswitch"). Revisit only if the lab turns into a real deployment.
       grouping/filter/disabled, callcenter odbc-dsn + params merge, conference
       video/audio profiles + map override, room-extension synthesis (pin
       dialstring, max-members, action order), NotFoundDocument.
-- [ ] API handler tests with httptest against a store interface (or a test
-      Postgres via testcontainers) — at minimum validation + error mapping.
-- [ ] Provider: acceptance tests for callcenter/conference resources (the
-      pattern exists in domain_resource_test.go); document why they run via
-      tofu (harness can't parse OpenTofu version).
+- [x] API handler tests (DONE 2026-06-12): internal/api/server_test.go —
+      auth middleware (401/pass-through), public healthz, xmlGuard Basic auth,
+      7 validation 400-paths (no DB needed: rejected before store), runtime
+      503 without ESL, recordings proxy (503 unconfigured, bad-date/traversal
+      400 with backend-untouched proof, listing proxied with Basic auth).
+      DB-touching paths stay covered by deploy/api-test.sh (89 live asserts).
+- [x] Provider acceptance tests (DONE 2026-06-12): callcenter_resources_test.go
+      (queue+agent+tier: create/import-verify/update incl. tier id
+      "queue/agent") + conference_resources_test.go (profile+room: defaults,
+      pin change, drop video). Run:
+      `TF_ACC=1 TF_ACC_TERRAFORM_PATH=$HOME/bin/terraform go test ./internal/provider/`
+      (real terraform v1.15.4 at ~/bin/terraform; harness can't parse tofu).
+      Verified self-cleaning (tfacc-* all 404 after run).
 - [x] GitHub Actions, platform repo (DONE 2026-06-12, .github/workflows/
       ci.yml): build+vet+test (control-plane) + compose-config validation +
       bash -n of all scripts. golangci-lint deferred (needs a config pass).
@@ -140,10 +148,48 @@ freeswitch"). Revisit only if the lab turns into a real deployment.
       params into freeswitch_user, recordings into the dated tree, optional
       Telegram notification.
 
+## Phase 7 — Publish the provider to the Terraform Registry
+
+Goal: users write `source = "jamalshahverdiev/freeswitch"` in
+`required_providers` — no dev_overrides. Prereqs already met: repo is PUBLIC,
+named by the mandatory convention, docs/ is in tfplugindocs format (the
+registry renders it), MIT license present.
+
+1. [ ] **GPG signing key** (USER ACTION) (registry verifies release signatures):
+       `gpg --full-generate-key` (RSA 4096, no expiry is fine for this),
+       export: `gpg --armor --export-secret-keys <id>` -> GitHub repo secret
+       `GPG_PRIVATE_KEY` + secret `PASSPHRASE`; `gpg --armor --export <id>`
+       (public part) is later pasted into the registry UI.
+       BACK UP the private key next to the age key.
+2. [x] terraform-registry-manifest.json (DONE 2026-06-12).
+3. [x] .goreleaser.yml (DONE 2026-06-12; `goreleaser check` ok; full
+       `--snapshot --skip=sign` build verified locally: 14 platform zips +
+       SHA256SUMS in 71s). main.go: version="dev" (ldflags-set), ServeOpts
+       Address switched to registry.terraform.io/jamalshahverdiev/freeswitch
+       (dev_overrides unaffected).
+4. [x] Release workflow .github/workflows/release.yml (DONE 2026-06-12):
+       tag v* -> import-gpg (secrets GPG_PRIVATE_KEY/PASSPHRASE) -> goreleaser.
+5. [x] Tag v0.1.0 (DONE 2026-06-12): release workflow green, 14 platform
+       zips + manifest + SHA256SUMS(.sig GPG-signed) attached.
+6. [x] registry.terraform.io PUBLISHED (2026-06-12): live at
+       registry.terraform.io/providers/jamalshahverdiev/freeswitch, v0.1.0
+       confirmed via the registry API.
+7. [ ] **OpenTofu registry** (we use tofu daily): submit via issue on
+       github.com/opentofu/registry ("Submit new provider"); after merge
+       `tofu init` resolves jamalshahverdiev/freeswitch natively too.
+8. [ ] After publish: update both READMEs + provider docs index
+       (`source = "jamalshahverdiev/freeswitch"`, version pin example);
+       keep dev_overrides documented for local development; examples/ in the
+       platform repo switch `source` from `local/freeswitch` to the registry
+       address (dev_overrides still wins locally when configured).
+9. [ ] Versioning discipline from here on: semver tags; breaking schema
+       changes -> minor bump pre-1.0; CHANGELOG.md (keep-a-changelog format).
+
 ---
 
 ## Suggested order (updated 2026-06-12)
 
 Phase 0 + 1 done, Phase 2 skipped. Focus = control-plane API + provider:
-Phase 3 (tests + CI for both repos) -> Phase 4 API debt (pagination, audit
-read API, priority validation) -> Phase 5/6 features as appetite allows.
+finish Phase 3 (handler tests, provider acceptance) -> Phase 7 (Terraform
+Registry publish) -> Phase 4 API debt (pagination, audit read API, priority
+validation) -> Phase 5/6 features as appetite allows.

@@ -1,98 +1,120 @@
 # FreeSWITCH IaC Platform
 
-Manage FreeSWITCH configuration as data (PostgreSQL) instead of hand-edited XML.
-FreeSWITCH pulls its directory/dialplan/config dynamically via `mod_xml_curl`
-from a Control Plane API; Terraform (next milestone) drives that API.
+[![ci](https://github.com/jamalshahverdiev/freeswitch-iac-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/jamalshahverdiev/freeswitch-iac-platform/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+Manage FreeSWITCH declaratively: configuration lives in **PostgreSQL** and is
+managed with **Terraform** instead of hand-edited XML. FreeSWITCH pulls
+directory / dialplan / module configs on demand via `mod_xml_curl` from a Go
+**control-plane API**; runtime commands go over ESL.
 
 ```
-Terraform ──► Control Plane API (Go) ──► PostgreSQL (desired state)
-                    │  ▲
-       XML renderer │  │ ESL (reloadxml / status)
-                    ▼  │
-            FreeSWITCH 1.11 (mod_xml_curl)
+Terraform ──► terraform-provider-freeswitch ──► Control-Plane API (Go)
+                                                     │        ▲
+                                       XML renderers │        │ ESL (reload / status)
+                                                     ▼        │
+                                    PostgreSQL   FreeSWITCH (mod_xml_curl)
 ```
 
-## Topology (this setup)
+The Terraform provider lives in its own repo:
+**[terraform-provider-freeswitch](https://github.com/jamalshahverdiev/terraform-provider-freeswitch)**.
 
-- **Control Plane + PostgreSQL** run here, on the dev box (WSL2 Debian, `172.31.30.216`) via Docker Compose.
-- **FreeSWITCH** runs on a separate server (`192.168.48.143`), installed as a host package.
+## What you can manage from Terraform
 
-Verified network paths:
+| Area | Resources |
+|---|---|
+| SIP directory | `freeswitch_domain`, `freeswitch_user` (a1-hash auth — plaintext passwords never leave the API) |
+| Dialplan / IVR | `freeswitch_dialplan_extension` (nested condition/action blocks; TTS via flite or Piper) |
+| Trunks | `freeswitch_gateway` |
+| Call center | `freeswitch_callcenter_queue` / `_agent` / `_tier` / `_reload` — **runtime state in Postgres via ODBC, no sqlite** |
+| Conferences | `freeswitch_conference_profile` / `_room` — composed **video grid** (mux), PIN rooms, auto-record |
+| Apply hooks | `freeswitch_reloadxml`, `freeswitch_callcenter_reload` |
+| Observability | data sources for config + runtime (registrations, gateway status, live conference members) |
 
-| From | To | Use |
-|---|---|---|
-| control-plane (172.31.30.216) | `192.168.48.143:8021` | ESL runtime commands |
-| FreeSWITCH (192.168.48.143) | `http://172.31.30.216:8080` | mod_xml_curl pulls XML |
+Plus: per-day call recording tree (`YYYY/MM/DD/*.wav`) with a list/download
+API, a self-hosted WebRTC softphone ([Browser-Phone](https://github.com/InnovateAsterisk/Browser-Phone))
+served from compose, and the FreeSWITCH **core db moved to Postgres** too —
+zero sqlite on the telephony host.
 
-## Components
+## Security model
+
+- `/api/v1/*` — Bearer token over HTTPS.
+- `/xml/*` (serves SIP secrets to FreeSWITCH) — HTTPS + **mTLS client cert** +
+  HTTP Basic auth; unknown lookups return `not found` so FreeSWITCH falls back
+  to its on-disk config and can't be broken by the binding.
+- Directory responses carry **`a1-hash`** (MD5 digest), never the plaintext
+  SIP password (verified with a real REGISTER, `hack/sip_register_test.py`).
+- ESL: non-default password + source ACL. Audit log redacts secrets.
+- Repo secrets are **age-encrypted** (`*.age` files, `hack/secrets.sh`).
+
+MVP limitation: SIP passwords are stored plaintext in PostgreSQL (needed to
+compute the a1-hash); the production path is secret refs / Vault.
+
+## Layout
 
 | Path | What |
 |---|---|
-| `control-plane/` | Go API: CRUD + XML renderers + ESL client + audit. PostgreSQL-backed. |
-| `docker-compose.yml` | Brings up `postgres` + `control-plane` (FreeSWITCH is external). |
-| `deploy/freeswitch/` | Config snippets for the FreeSWITCH server (`xml_curl`, `event_socket`, `acl`). |
-| `deploy/seed.sh` | Seeds the demo (domain + 2 users + dialplan) over the REST API. |
-| `examples/basic-pbx/` | Terraform example (target state; provider is the next milestone). |
+| `control-plane/` | Go API: CRUD, XML renderers, ESL client, audit log |
+| `docker-compose.yml` | `postgres` + `control-plane` + `webphone` (FreeSWITCH is external) |
+| `deploy/freeswitch/` | Version-controlled configs for the FreeSWITCH host (xml_curl, ESL, ACL, ODBC, sofia profiles, recordings nginx) |
+| `deploy/api-test.sh` | Full API regression (89 assertions, self-cleaning) |
+| `deploy/seed.sh`, `seed-ivr.sh` | Demo data over the REST API |
+| `examples/` | Working Terraform examples: IVRs (incl. neural TTS), WebRTC users, call center, video conferences |
+| `webphone/` | Browser-Phone container (WebRTC softphone, audio+video) |
+| `hack/` | TLS generation, backups + restore drill, secrets, e2e helpers |
+| `docs/` | architecture, API reference, WebRTC/webphone guides |
 
 ## Quick start
 
+Prereqs: Docker + compose, a FreeSWITCH 1.11 host you control, OpenTofu or
+Terraform.
+
 ```bash
-cp .env.example .env          # adjust secrets/addresses
-bash hack/gen-tls.sh          # generate dev CA + server/client certs into deploy/tls/
-docker compose up -d --build  # postgres + control-plane (HTTPS + mTLS on /xml)
+git clone https://github.com/jamalshahverdiev/freeswitch-iac-platform
+cd freeswitch-iac-platform
 
-CA=deploy/tls/ca.crt
-curl -s --cacert $CA https://localhost:8080/healthz   # {"status":"ok"}
-curl -s --cacert $CA https://localhost:8080/readyz    # {"status":"ready","database":"ok"}
+# 1. Secrets: create your own (the committed *.age files are the authors')
+cp .env.example .env          # set your passwords
+bash hack/gen-tls.sh          # your own CA + server/client certs -> deploy/tls/
 
-# Seed demo data (domain + users 2001/2002 + IVR), then the nested IVR 7000/7100:
-./deploy/seed.sh
-./deploy/seed-ivr.sh
+# 2. Control plane up
+docker compose up -d --build
+curl -s --cacert deploy/tls/ca.crt https://localhost:8080/readyz   # {"database":"ok",...}
 
-# Full API regression (CRUD + auth + TLS/mTLS + ESL): expect 53 passed.
-bash deploy/api-test.sh
+# 3. Demo data + regression
+./deploy/seed.sh && ./deploy/seed-ivr.sh
+bash deploy/api-test.sh       # expect: 89 passed, 0 failed
 ```
 
-The control-plane serves **HTTPS**, and `/xml/*` additionally requires a client
-certificate (**mTLS**) on top of Basic auth. To run plain HTTP instead, leave the
-`TLS_*` / `XML_CLIENT_CA_FILE` vars empty.
+Maintainers with the age key instead run `hack/secrets.sh decrypt`.
 
 ## Wire up the FreeSWITCH server
 
-On `192.168.48.143`:
+1. Copy `deploy/freeswitch/xml_curl.conf.xml` + `event_socket.conf.xml`
+   (and merge `acl.conf.xml`) into `/etc/freeswitch/autoload_configs/`,
+   adjusting the control-plane address and credentials.
+2. Copy `deploy/tls/{ca.crt,client.crt,client.key}` to `/etc/freeswitch/tls/`
+   (xml_curl uses them for mTLS).
+3. Ensure `mod_xml_curl` is loaded, then `fs_cli -x "reload mod_xml_curl"`
+   (changing the binding URL/credentials needs `reload mod_xml_curl`, NOT just
+   `reloadxml`).
+4. Optional but recommended: ODBC DSNs (`deploy/freeswitch/odbc/`) move
+   mod_callcenter and the FreeSWITCH core db into your Postgres — no sqlite.
+5. Declare your PBX: `cd examples/webrtc-users && tofu apply`.
 
-1. Copy `deploy/freeswitch/xml_curl.conf.xml` and `event_socket.conf.xml`
-   (and merge `acl.conf.xml`) into `/etc/freeswitch/autoload_configs/`.
-2. Copy the TLS client material (`deploy/tls/{ca.crt,client.crt,client.key}`)
-   to `/etc/freeswitch/tls/` (referenced by `xml_curl.conf.xml` for mTLS).
-3. Ensure `mod_xml_curl` is loaded (`modules.conf.xml`).
-4. `fs_cli -x "reload mod_xml_curl" && fs_cli -x reloadacl`
-   (note: changing xml_curl URL/credentials/certs needs `reload mod_xml_curl`,
-   not just `reloadxml`).
-5. Register SIP clients `2001` / `2002` (password `2580`, domain
-   `192.168.48.143`); dial `7000` for the IVR or `2001`↔`2002` direct.
+## Docs
 
-## API
-
-`/api/v1/*` (Bearer token): `domains`, `users`, `gateways`, `dialplan/extensions`,
-`runtime/reloadxml`, `runtime/health`.
-`/xml/{directory,dialplan,configuration}`: FreeSWITCH-facing (network-restricted).
-`/healthz`, `/readyz`: health.
+- [Architecture & topology](docs/architecture.md)
+- [API reference](docs/api.md)
+- [System overview](docs/SYSTEM-OVERVIEW.md)
+- [WebRTC](docs/webrtc.md) / [Webphone](docs/webphone.md)
+- [IVR audio & TTS](docs/ivr-audio.md), [custom prompts](docs/howto-custom-prompt.md)
+- [Roadmap / improvement plan](docs/IMPROVEMENT-PLAN.md)
 
 ## Make targets
 
 `make up | down | logs | ps | build | vet | test | tidy | smoke`
 
-## Security
+## License
 
-- `/api/v1/*` — Bearer token.
-- `/xml/*` — HTTPS + **mTLS** (FreeSWITCH client cert) + HTTP Basic auth, and a
-  `not found` fallback so it can't break the default FreeSWITCH config.
-- Directory sends **`a1-hash`**, never the plaintext SIP password (verified by a
-  real REGISTER, `hack/sip_register_test.py`).
-- ESL — non-default password + ACL (loopback + control-plane source only).
-- Audit logs redact `password` / `vm-password`.
-
-MVP limitation: SIP passwords are still stored plaintext in PostgreSQL (used to
-compute the a1-hash). See `freeswitch-iac-docs/SECURITY_MODEL.md` for the
-production path (secret_ref / Vault).
+MIT — see [LICENSE](LICENSE).

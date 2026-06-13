@@ -26,11 +26,15 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
+	pg, ok := parsePage(w, r)
+	if !ok {
+		return
+	}
 	users, err := s.store.ListUsers(r.Context(), r.URL.Query().Get("domain"))
 	if writeStoreError(w, err) {
 		return
 	}
-	writeJSON(w, http.StatusOK, users)
+	writeList(w, users, pg)
 }
 
 func (s *Server) handleGetUser(w http.ResponseWriter, r *http.Request) {

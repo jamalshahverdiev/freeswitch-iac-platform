@@ -35,3 +35,14 @@ jobs:
       - name: Shell scripts parse
         run: |
           for f in hack/*.sh deploy/*.sh; do bash -n "$f"; done
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so leaks in older commits are caught
+      - name: Scan for committed secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml

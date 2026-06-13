@@ -40,11 +40,15 @@ func (s *Server) handleCreateConfProfile(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *Server) handleListConfProfiles(w http.ResponseWriter, r *http.Request) {
+	pg, ok := parsePage(w, r)
+	if !ok {
+		return
+	}
 	out, err := s.store.ListConferenceProfiles(r.Context())
 	if writeStoreError(w, err) {
 		return
 	}
-	writeJSON(w, http.StatusOK, out)
+	writeList(w, out, pg)
 }
 
 func (s *Server) handleGetConfProfile(w http.ResponseWriter, r *http.Request) {
@@ -102,11 +106,15 @@ func (s *Server) handleCreateConfRoom(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListConfRooms(w http.ResponseWriter, r *http.Request) {
+	pg, ok := parsePage(w, r)
+	if !ok {
+		return
+	}
 	out, err := s.store.ListConferenceRooms(r.Context(), r.URL.Query().Get("context"))
 	if writeStoreError(w, err) {
 		return
 	}
-	writeJSON(w, http.StatusOK, out)
+	writeList(w, out, pg)
 }
 
 func (s *Server) handleGetConfRoom(w http.ResponseWriter, r *http.Request) {

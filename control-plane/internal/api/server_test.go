@@ -150,6 +150,56 @@ func TestRuntimeRequiresESL(t *testing.T) {
 	}
 }
 
+func TestPaginationHelper(t *testing.T) {
+	items := []int{0, 1, 2, 3, 4}
+	cases := []struct {
+		limit, offset int
+		want          []int
+		wantTotal     int
+	}{
+		{0, 0, []int{0, 1, 2, 3, 4}, 5}, // no limit = all (backward compat)
+		{2, 0, []int{0, 1}, 5},
+		{2, 3, []int{3, 4}, 5},
+		{10, 0, []int{0, 1, 2, 3, 4}, 5}, // limit > len
+		{2, 99, []int{}, 5},              // offset past end
+	}
+	for _, c := range cases {
+		out, total := apply(items, page{limit: c.limit, offset: c.offset})
+		if total != c.wantTotal {
+			t.Errorf("limit=%d offset=%d total=%d want %d", c.limit, c.offset, total, c.wantTotal)
+		}
+		if len(out) != len(c.want) {
+			t.Errorf("limit=%d offset=%d got %v want %v", c.limit, c.offset, out, c.want)
+			continue
+		}
+		for i := range out {
+			if out[i] != c.want[i] {
+				t.Errorf("limit=%d offset=%d got %v want %v", c.limit, c.offset, out, c.want)
+				break
+			}
+		}
+	}
+}
+
+func TestPaginationBadParams(t *testing.T) {
+	h := testServer(t, Options{})
+	for _, q := range []string{"limit=abc", "limit=-1", "offset=-5", "offset=x"} {
+		rec := do(t, h, http.MethodGet, "/api/v1/domains?"+q, "test-token", "")
+		// nil store would panic only AFTER parsePage; a 400 proves we stopped first.
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("%s: got %d want 400", q, rec.Code)
+		}
+	}
+}
+
+func TestAuditBadLimit(t *testing.T) {
+	h := testServer(t, Options{})
+	rec := do(t, h, http.MethodGet, "/api/v1/audit?limit=nope", "test-token", "")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("got %d want 400", rec.Code)
+	}
+}
+
 func TestRecordings(t *testing.T) {
 	t.Run("503 when not configured", func(t *testing.T) {
 		h := testServer(t, Options{})

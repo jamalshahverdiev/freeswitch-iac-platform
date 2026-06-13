@@ -27,11 +27,15 @@ func (s *Server) handleCreateGateway(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListGateways(w http.ResponseWriter, r *http.Request) {
+	pg, ok := parsePage(w, r)
+	if !ok {
+		return
+	}
 	gateways, err := s.store.ListGateways(r.Context(), r.URL.Query().Get("profile"))
 	if writeStoreError(w, err) {
 		return
 	}
-	writeJSON(w, http.StatusOK, gateways)
+	writeList(w, gateways, pg)
 }
 
 func (s *Server) handleGetGateway(w http.ResponseWriter, r *http.Request) {

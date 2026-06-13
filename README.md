@@ -3,6 +3,8 @@
 [![ci](https://github.com/jamalshahverdiev/freeswitch-iac-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/jamalshahverdiev/freeswitch-iac-platform/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+![FreeSWITCH IaC Platform — System Topology](images/topology.png)
+
 Manage FreeSWITCH declaratively: configuration lives in **PostgreSQL** and is
 managed with **Terraform** instead of hand-edited XML. FreeSWITCH pulls
 directory / dialplan / module configs on demand via `mod_xml_curl` from a Go

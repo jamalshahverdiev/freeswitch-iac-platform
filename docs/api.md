@@ -402,6 +402,31 @@ hash); `vm-password` (voicemail PIN) is still emitted as-is.
 
 ---
 
+## Pagination
+
+All `GET` list endpoints accept optional `?limit=N&offset=M`. Without them the
+full set is returned (unchanged behaviour). The response body stays a bare JSON
+array; the unpaged total is in the `X-Total-Count` header. `limit` is capped at
+1000; a negative or non-numeric `limit`/`offset` returns `400`.
+
+```bash
+curl -s -D- "$API/api/v1/users?domain=192.168.48.143&limit=50&offset=0" "${H[@]}"
+#   X-Total-Count: 137
+```
+
+## Audit log (changelog)
+
+Every create/update/delete is recorded (with `password`/`vm-password`
+redacted). Read it back as a changelog — newest first, with filters:
+
+```bash
+curl -s "$API/api/v1/audit?limit=20" "${H[@]}"
+curl -s "$API/api/v1/audit?resource_type=freeswitch_callcenter_queue" "${H[@]}"
+curl -s "$API/api/v1/audit?actor=terraform&action=delete" "${H[@]}"
+# filters: actor, action, resource_type, resource_id; + limit/offset, X-Total-Count
+# -> [{"id","actor","action","resource_type","resource_id","before","after","created_at"}, ...]
+```
+
 ## Runtime (ESL)
 
 ```bash

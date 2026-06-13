@@ -26,11 +26,15 @@ func (s *Server) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListDomains(w http.ResponseWriter, r *http.Request) {
+	pg, ok := parsePage(w, r)
+	if !ok {
+		return
+	}
 	domains, err := s.store.ListDomains(r.Context())
 	if writeStoreError(w, err) {
 		return
 	}
-	writeJSON(w, http.StatusOK, domains)
+	writeList(w, domains, pg)
 }
 
 func (s *Server) handleGetDomain(w http.ResponseWriter, r *http.Request) {

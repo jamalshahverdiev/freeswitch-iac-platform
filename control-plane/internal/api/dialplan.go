@@ -60,12 +60,16 @@ func (s *Server) handleCreateExtension(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListExtensions(w http.ResponseWriter, r *http.Request) {
+	pg, ok := parsePage(w, r)
+	if !ok {
+		return
+	}
 	q := r.URL.Query()
 	exts, err := s.store.ListDialplanExtensions(r.Context(), q.Get("domain"), q.Get("context"))
 	if writeStoreError(w, err) {
 		return
 	}
-	writeJSON(w, http.StatusOK, exts)
+	writeList(w, exts, pg)
 }
 
 func (s *Server) handleGetExtension(w http.ResponseWriter, r *http.Request) {

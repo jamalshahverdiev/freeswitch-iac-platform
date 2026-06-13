@@ -149,6 +149,8 @@ func (s *Server) Router() http.Handler {
 		r.Put("/conference/rooms/{name}", s.handleUpdateConfRoom)
 		r.Delete("/conference/rooms/{name}", s.handleDeleteConfRoom)
 
+		r.Get("/audit", s.handleListAudit)
+
 		r.Post("/runtime/reloadxml", s.handleReloadXML)
 		r.Get("/runtime/health", s.handleRuntimeHealth)
 		r.Get("/runtime/gateways/{profile}/{name}", s.handleRuntimeGatewayStatus)

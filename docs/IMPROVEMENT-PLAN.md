@@ -102,51 +102,124 @@ freeswitch"). Revisit only if the lab turns into a real deployment.
 
 ## Phase 4 — Tech debt
 
-- [ ] hack/rec_queue_test.sh: replace the dead loopback-agent variant with
-      the proven sipp recipe (sipp -sn uas -p 5070 -rtp_echo + agent contact
-      sofia/internal/bot@127.0.0.1:5070); make it fully self-contained.
-- [ ] Pagination (`?limit=&offset=`) on all list endpoints; provider data
-      sources unaffected (they read single items).
-- [ ] Audit log read API: `GET /api/v1/audit?from=&to=&resource=` — the data
-      is already written; this is a free changelog of "who changed what".
-- [ ] Validation: reject duplicate (context, priority) across dialplan
-      extensions + conference rooms at create/update time (renderer order is
-      otherwise nondeterministic).
-- [ ] Secrets hygiene: move all credentials out of HANDOFF.md into
-      `deploy/SECRETS.md` (gitignored) or a vault; HANDOFF references it.
+- [x] hack/rec_queue_test.sh (DONE 2026-06-13): rewritten to the sipp recipe;
+      sipp runs as a transient systemd unit (sipp-bot) so it survives ssh —
+      plain `&`/nohup/`-bg` died on session close. FS() ssh calls wrapped in
+      `timeout` (a daemon's inherited stdout pipe hangs ssh otherwise). Green
+      run: bot Answered, recordings 4->5, self-cleaning via EXIT trap.
+- [x] Pagination (DONE 2026-06-13): optional ?limit=&offset= on every GET list
+      endpoint via api/pagination.go (generic apply[T]/writeList[T]); bare-array
+      body preserved + X-Total-Count header; limit capped 1000; bad params 400.
+      Handler-level (xml.go still gets all rows). Provider data sources read
+      single items -> unaffected. Unit + live tested.
+- [x] Audit read API (DONE 2026-06-13): GET /api/v1/audit, filters
+      actor/action/resource_type/resource_id + limit/offset, newest-first,
+      X-Total-Count. models/audit.go + store/audit.go + api/audit.go.
+- [WON'T DO] Validation duplicate (context, priority): REJECTED 2026-06-13 —
+      would break legitimate cases (examples/conference has 2 rooms in context
+      `company` both at default priority 5). Multiple extensions sharing a
+      priority is valid in FreeSWITCH; the renderer already sorts deterministically
+      by (context, priority, name), so order is stable without this constraint.
+- [x] Secrets hygiene (DONE in Phase 0 git split): all creds in age-encrypted
+      deploy/SECRETS.md.age; HANDOFF references it; literals scrubbed from code.
 - [ ] ESL hardening (optional): document the plaintext-password risk; ACL is
       the current mitigation; consider stunnel/wireguard if it ever leaves
       the lab.
 
 ## Phase 5 — Roadmap features (already agreed earlier)
 
-- [ ] **D1 Grafana NOC dashboard**: compose service + read-only PG user +
-      provisioned dashboards in deploy/grafana/ (live channels,
-      registrations, queue members, agent states).
+### D1 — Grafana NOC dashboard (NEXT; near-free after the no-sqlite milestone)
+
+All live state already sits in our PostgreSQL (freeswitch_core.channels /
+sip_registrations, freeswitch_callcenter.agents/members/tiers,
+freeswitch_control.*), so this is mostly wiring + dashboard JSON.
+
+1. [ ] Read-only DB role: add to `deploy/postgres-init/` a script creating a
+       `grafana_ro` login with `CONNECT` + `USAGE` + `SELECT` on all three DBs
+       (no write). Password via `.env` (age) `GRAFANA_DB_PASSWORD`.
+2. [ ] Compose: add a `grafana` service (grafana/grafana-oss), publish e.g.
+       `3000:3000`, `GF_SECURITY_ADMIN_PASSWORD` from `.env`, mount
+       `deploy/grafana/provisioning/` and `deploy/grafana/dashboards/` read-only.
+       Add GRAFANA_DB_PASSWORD/admin pass to `.env.example` + SECRETS.md.age.
+3. [ ] Provision datasources (`deploy/grafana/provisioning/datasources/*.yml`):
+       three postgres datasources (control / callcenter / core) using grafana_ro,
+       `sslmode=disable` (compose-internal network).
+4. [ ] Dashboard JSON (`deploy/grafana/dashboards/noc.json`), panels:
+       - Live calls: `SELECT count(*) FROM channels` (core) — stat + timeseries
+       - Registered endpoints: `sip_registrations` (core) — table (sip_user, ip)
+       - Queue waiting: `members WHERE state!='Answered'` (callcenter) — stat
+       - Agents: state / status / calls_answered / no_answer_count (callcenter) — table
+       - Desired-state counts: users, dialplan_extensions, cc_queues,
+         conference_rooms (control) — stat row
+       Refresh 5s.
+5. [ ] Doc: `docs/observability.md` + a panel screenshot; link from README.
+       Note: Grafana auto-refresh polls Postgres directly (read-only) — it does
+       NOT go through the control-plane API.
+6. [ ] api-test/CI: nothing to assert in api-test (no API surface); just make
+       sure `docker compose config` still validates with the new service.
+
 - [ ] **C1 CDR via mod_json_cdr** → control-plane `/cdr` (mTLS+Basic like
       /xml) → cdr table + `GET /api/v1/cdr` + stats; Grafana panels on top.
+      Steps: load mod_json_cdr on the FS host (`json_cdr.conf.xml` → url
+      `https://172.31.30.216:8080/cdr`, same client cert + creds as xml_curl,
+      retry-on-failure queue); control-plane `POST /cdr` (mTLS+Basic guarded
+      like /xml) + migration `cdr` table (uuid, caller/callee, direction,
+      context, start/answer/end epochs, duration, billsec, hangup_cause,
+      recording_path, raw JSONB); `GET /api/v1/cdr?from=&to=&number=&cause=`
+      (paginated, reuse the page helper) + a stats endpoint; decide table
+      lives in freeswitch_control (control-plane-owned). Grafana panels extend D1.
 - [ ] **A1 AI voice agent** in the queue (Whisper STT + Piper TTS + Claude
-      API) — after C1.
+      API) — after C1. When agents are absent: a bot answers (mod_audio_fork
+      or mod_vosk STT + existing Piper TTS + Claude API), collects the
+      question, writes a transcript to Postgres, transfers to an agent with
+      context. Builds on the recording pipeline (R1) + call metadata (C1).
 - [ ] Gateways from DB (Option A include+rescan) — when a SIP provider exists.
+      Render each DB gateway to /etc/freeswitch/sip_profiles/external/<name>.xml
+      + `sofia profile external rescan`; needs a delivery channel (pull-agent or
+      CI scp) since the control-plane can't write the FS disk. Do NOT enable the
+      xml_curl configuration binding for sofia.conf with a partial renderer.
 
 ## Phase 6 — New "wow" features (pick by appetite)
 
-- [ ] **WebSocket live events**: control-plane subscribes to ESL events and
-      streams them at `/api/v1/events` (calls started/ended, agent status) —
-      foundation for wallboard and bots, no polling.
-- [ ] **Supervisor wallboard**: small page next to webphone reading our
-      Postgres (queue depth, agent states, wait times). Demo-friendlier than
-      Grafana.
-- [ ] **Time-based routing**: Terraform resource for schedules (business
-      hours / holidays) → day: queue, night: IVR. Real PBX pain point.
-- [ ] **Phone provisioning**: `/provision/{mac}.xml` endpoint rendering
-      device configs from the same DB (Yealink/Grandstream templates).
-- [ ] **GitOps flow**: once repos exist — PR with IVR change → CI posts
-      `tofu plan` diff → merge applies. This IS the original dream from the
-      design docs.
-- [ ] **Voicemail integration**: mod_voicemail already on ODBC; wire mailbox
-      params into freeswitch_user, recordings into the dated tree, optional
-      Telegram notification.
+- [ ] **WebSocket / SSE live events** — foundation for wallboard + bots.
+      1. Add a PERSISTENT ESL listener to the control-plane (current ESL client
+         is connect-per-command; add a long-lived goroutine that connects, sends
+         `event plain CHANNEL_CREATE CHANNEL_ANSWER CHANNEL_HANGUP_COMPLETE
+         CUSTOM callcenter::info conference::maintenance`, reconnects on drop).
+      2. Internal pub/sub hub (fan-out to subscribers); parse the events we care
+         about into small JSON (call started/ended, agent status, queue join/leave,
+         conference join/leave).
+      3. Expose `GET /api/v1/events` as SSE (simpler than WS for one-way) behind
+         the bearer token; heartbeat + last-event-id optional.
+      4. Tests: feed canned ESL event frames into the parser (unit); a manual
+         curl stream check against the live box.
+- [ ] **Supervisor wallboard** — a small static page (like webphone) or a
+      control-plane HTML route that consumes `/api/v1/events` (Phase 6 #1) and
+      shows queue depth, agent states, current calls, wait times in real time.
+      Serve from compose (or reuse the webphone nginx). Demo-friendlier than
+      Grafana because it is push/live and call-center focused.
+- [ ] **Time-based routing** — FreeSWITCH dialplan conditions support time
+      fields (`wday`, `time-of-day`, `mday`, `date-time`). Extend the dialplan
+      renderer + `freeswitch_dialplan_extension` condition schema with optional
+      time attributes, then add a `freeswitch_schedule`-style helper/example:
+      business hours → queue 4444, off-hours → an IVR "call back later". Keep it
+      pure dialplan (no new runtime moving parts).
+- [ ] **Phone provisioning** — `GET /provision/{mac}.xml` (or .cfg) endpoint
+      rendering vendor device configs from a new `provisioned_devices` table
+      (mac → user/line/server/codecs). Templates per vendor (Yealink,
+      Grandstream). Served over HTTP on the LAN (devices fetch on boot); guard
+      by MAC + network ACL. Terraform resource `freeswitch_device`.
+- [ ] **GitOps flow** — now that repos are public and the provider is published:
+      a separate "PBX config" repo holding tofu + remote state; GitHub Actions
+      runs `tofu plan` on PR and posts the diff as a comment, `tofu apply` on
+      merge to main. This realizes the original design-doc dream end to end.
+      Needs: remote state backend + provider creds as repo secrets.
+- [ ] **Voicemail integration** — mod_voicemail already stores in
+      freeswitch_core via ODBC. Wire mailbox params into `freeswitch_user`
+      (vm-password already passes through; add enable/greeting/email options),
+      drop voicemail recordings into the dated tree, and add an optional
+      notification (control-plane webhook → Telegram/email) on new voicemail
+      via an ESL `MESSAGE_WAITING` / vm event subscription (ties into Phase 6 #1).
 
 ## Phase 7 — Publish the provider to the Terraform Registry
 
@@ -174,9 +247,14 @@ registry renders it), MIT license present.
 6. [x] registry.terraform.io PUBLISHED (2026-06-12): live at
        registry.terraform.io/providers/jamalshahverdiev/freeswitch, v0.1.0
        confirmed via the registry API.
-7. [ ] **OpenTofu registry** (we use tofu daily): submit via issue on
-       github.com/opentofu/registry ("Submit new provider"); after merge
-       `tofu init` resolves jamalshahverdiev/freeswitch natively too.
+7. [~] OpenTofu registry: SMOKE-VERIFIED first (2026-06-13) — `terraform init`
+       in a clean dir with no dev_overrides downloaded
+       registry.terraform.io/jamalshahverdiev/freeswitch v0.1.1, signature
+       verified (lock file has h1: hashes). OpenTofu submission = USER ACTION:
+       open a "Submit Provider" issue at github.com/opentofu/registry with the
+       repo URL; bot pulls the GPG key from the signed release and auto-merges.
+       Pubkey fingerprint rsa4096/25A5F6EA501A7CBF, export at
+       /tmp/tf-provider-pubkey.asc if the form needs it pasted.
 8. [ ] After publish: update both READMEs + provider docs index
        (`source = "jamalshahverdiev/freeswitch"`, version pin example);
        keep dev_overrides documented for local development; examples/ in the

@@ -154,6 +154,17 @@ req GET "/api/v1/recordings";                       check "list recordings (toda
 req GET "/api/v1/recordings?date=bad";              check "bad date -> 400" 400 "$CODE"
 req GET "/api/v1/recordings/2026-01-01/nope.wav";   check "missing recording -> 404" 404 "$CODE"
 
+echo "== audit log read API =="
+req GET "/api/v1/audit?limit=5";                    check "list audit -> 200" 200 "$CODE"
+req GET "/api/v1/audit?resource_type=freeswitch_domain&limit=1"
+check "audit filter by resource_type -> 200" 200 "$CODE"; contains "audit entry is for a domain" '"resource_type":"freeswitch_domain"'
+req GET "/api/v1/audit?limit=notanint";             check "audit bad limit -> 400" 400 "$CODE"
+
+echo "== pagination =="
+req GET "/api/v1/domains?limit=1";   check "domains limit=1 -> 200" 200 "$CODE"
+req GET "/api/v1/domains?limit=abc"; check "domains bad limit -> 400" 400 "$CODE"
+req GET "/api/v1/domains?offset=-1"; check "domains bad offset -> 400" 400 "$CODE"
+
 echo "== runtime (ESL) =="
 req GET  /api/v1/runtime/health;  check "runtime health -> 200" 200 "$CODE"
 req POST /api/v1/runtime/reloadxml; check "reloadxml -> 200" 200 "$CODE"

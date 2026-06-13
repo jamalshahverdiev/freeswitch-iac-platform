@@ -39,11 +39,15 @@ func (s *Server) handleCreateCCQueue(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListCCQueues(w http.ResponseWriter, r *http.Request) {
+	pg, ok := parsePage(w, r)
+	if !ok {
+		return
+	}
 	out, err := s.store.ListCCQueues(r.Context())
 	if writeStoreError(w, err) {
 		return
 	}
-	writeJSON(w, http.StatusOK, out)
+	writeList(w, out, pg)
 }
 
 func (s *Server) handleGetCCQueue(w http.ResponseWriter, r *http.Request) {
@@ -109,11 +113,15 @@ func (s *Server) handleCreateCCAgent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListCCAgents(w http.ResponseWriter, r *http.Request) {
+	pg, ok := parsePage(w, r)
+	if !ok {
+		return
+	}
 	out, err := s.store.ListCCAgents(r.Context())
 	if writeStoreError(w, err) {
 		return
 	}
-	writeJSON(w, http.StatusOK, out)
+	writeList(w, out, pg)
 }
 
 func (s *Server) handleGetCCAgent(w http.ResponseWriter, r *http.Request) {
@@ -171,11 +179,15 @@ func (s *Server) handleCreateCCTier(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListCCTiers(w http.ResponseWriter, r *http.Request) {
+	pg, ok := parsePage(w, r)
+	if !ok {
+		return
+	}
 	out, err := s.store.ListCCTiers(r.Context(), r.URL.Query().Get("queue"))
 	if writeStoreError(w, err) {
 		return
 	}
-	writeJSON(w, http.StatusOK, out)
+	writeList(w, out, pg)
 }
 
 func (s *Server) handleGetCCTier(w http.ResponseWriter, r *http.Request) {

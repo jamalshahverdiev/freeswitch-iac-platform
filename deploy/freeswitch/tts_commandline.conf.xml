@@ -1,0 +1,19 @@
+<!--
+  mod_tts_commandline -> Piper (neural TTS).
+
+  Install as: /etc/freeswitch/autoload_configs/tts_commandline.conf.xml
+  Piper lives at /opt/piper/piper, voices at /opt/piper/voices/<voice>.onnx.
+
+  Dialplan usage (engine|voice|text):
+    <action application="speak"
+            data="tts_commandline|en_US-ryan-medium|Hello from piper."/>
+
+  ${text} ${voice} ${file} are substituted by the module and are ALREADY
+  single-quoted by it — do not add your own quotes. Piper outputs 22.05 kHz wav;
+  FreeSWITCH resamples on playback. Keep prompt texts free of single quotes.
+-->
+<configuration name="tts_commandline.conf" description="TextToSpeech Commandline configuration">
+  <settings>
+    <param name="command" value="echo ${text} | /opt/piper/piper --model /opt/piper/voices/${voice}.onnx --output_file ${file}"/>
+  </settings>
+</configuration>

@@ -1,0 +1,82 @@
+# FreeSWITCH IaC Platform — split stack.
+#
+# Design:
+#   - This compose (postgres + control-plane) runs on the LOCAL dev box
+#     (WSL2 Debian, 172.31.30.216).
+#   - FreeSWITCH runs on a SEPARATE server (192.168.48.143), freshly installed
+#     as a host package — NOT in a container.
+#
+# Network paths (both verified reachable):
+#   - control-plane -> FreeSWITCH ESL : outbound to ESL_ADDR (192.168.48.143:8021)
+#   - FreeSWITCH mod_xml_curl -> control-plane : the FS server calls back to this
+#     box at http://172.31.30.216:8080 (set in deploy/freeswitch/xml_curl.conf.xml)
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-freeswitch_control}
+      POSTGRES_USER: ${POSTGRES_USER:-freeswitch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-freeswitch}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # extra DBs (freeswitch_callcenter, freeswitch_core) on first init
+      - ./deploy/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-freeswitch} -d ${POSTGRES_DB:-freeswitch_control}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  control-plane:
+  
+    build:
+      context: ./control-plane
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-freeswitch}:${POSTGRES_PASSWORD:-freeswitch}@postgres:5432/${POSTGRES_DB:-freeswitch_control}?sslmode=disable
+      API_TOKEN: ${API_TOKEN:-dev-token}
+      HTTP_ADDR: ":8080"
+      ESL_ADDR: ${ESL_ADDR:-192.168.48.143:8021}
+      ESL_PASSWORD: ${ESL_PASSWORD:-ClueCon}
+      # Protect /xml/* (it exposes SIP/trunk secrets). mod_xml_curl sends these
+      # via gateway-credentials. Optionally also set XML_ALLOW_CIDRS.
+      XML_USER: ${XML_USER:-freeswitch}
+      XML_PASSWORD: ${XML_PASSWORD:?set XML_PASSWORD in .env}
+      XML_ALLOW_CIDRS: ${XML_ALLOW_CIDRS:-}
+      # TLS: HTTPS for everything, mTLS (client cert) for /xml/*.
+      # Generate certs with hack/gen-tls.sh. Leave blank to fall back to HTTP.
+      TLS_CERT_FILE: ${TLS_CERT_FILE:-/tls/server.crt}
+      TLS_KEY_FILE: ${TLS_KEY_FILE:-/tls/server.key}
+      XML_CLIENT_CA_FILE: ${XML_CLIENT_CA_FILE:-/tls/ca.crt}
+      # mod_callcenter runtime tables go to PostgreSQL via this ODBC DSN
+      # (matches the [freeswitch] DSN configured on the FS server).
+      CC_ODBC_DSN: ${CC_ODBC_DSN:-freeswitch:freeswitch:freeswitch}
+      # Recordings file server on the FS host (nginx :8088, basic auth) that
+      # GET /api/v1/recordings proxies (list + download).
+      REC_URL: ${REC_URL:-http://192.168.48.143:8088}
+      REC_USER: ${REC_USER:-recordings}
+      REC_PASSWORD: ${REC_PASSWORD:-}
+    volumes:
+      - ./deploy/tls:/tls:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Self-hosted WebRTC softphone UI (Browser-Phone over nginx+TLS).
+  # Open https://172.31.30.216:8443 from a machine that trusts deploy/tls/ca.crt.
+  webphone:
+    build:
+      context: ./webphone
+    ports:
+      - "8443:443"
+    volumes:
+      - ./deploy/tls:/tls:ro
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

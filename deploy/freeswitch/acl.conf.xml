@@ -1,0 +1,23 @@
+<!--
+  ACL used to restrict who may open an ESL connection.
+
+  This is a SNIPPET to merge into the existing:
+    /etc/freeswitch/autoload_configs/acl.conf.xml
+  (add the <list> below inside <network-lists> — do NOT drop the default lists).
+
+  The "control-plane" list denies by default and allows only loopback (so the
+  server's own fs_cli keeps working) and the dev box running the control-plane.
+  After editing: `fs_cli -x 'reloadacl'`.
+-->
+<configuration name="acl.conf" description="Network Lists">
+  <network-lists>
+    <list name="control-plane" default="deny">
+      <node type="allow" cidr="127.0.0.1/32"/>
+      <node type="allow" cidr="::1/128"/>
+      <!-- The dev box (172.31.30.216) reaches the FS server through a router
+           that SNATs it to 192.168.48.1, so allow that source for ESL. -->
+      <node type="allow" cidr="192.168.48.1/32"/>
+      <node type="allow" cidr="172.31.30.216/32"/>
+    </list>
+  </network-lists>
+</configuration>

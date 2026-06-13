@@ -1,0 +1,15 @@
+# Daily platform backup (Postgres dumps + call recordings) on the dev box.
+# NOT installed automatically — review and install by hand:
+#
+#   crontab -e        # paste the line below
+#   # or:
+#   crontab deploy/cron/backup.crontab   # REPLACES your whole crontab!
+#
+# WSL2 note: cron only fires while WSL2 is running. If the box is usually
+# off at night, pick a daytime hour or drive it from Windows Task Scheduler:
+#   wsl.exe -e bash -lc '/home/jamal/github/freeswitch-iac-platform/hack/backup-postgres.sh'
+#
+# Restore drill (run after changing anything in the backup pipeline):
+#   hack/restore-test.sh [YYYY-MM-DD]
+
+30 3 * * * /home/jamal/github/freeswitch-iac-platform/hack/backup-postgres.sh >> /home/jamal/backups/freeswitch/backup.log 2>&1

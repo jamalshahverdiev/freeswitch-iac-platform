@@ -1,0 +1,21 @@
+# gitleaks config for the FreeSWITCH IaC Platform.
+# Uses the built-in ruleset, plus an allowlist for things that are committed
+# on purpose and are NOT secrets-in-the-clear.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Intentionally committed, non-sensitive or already-encrypted content"
+paths = [
+  # age-encrypted blobs: high entropy by design, the only place secrets live.
+  '''.*\.age$''',
+  # generated provider docs / terraform examples use a documented dev token.
+  '''(^|/)docs/.*\.md$''',
+]
+regexes = [
+  # "dev-token" is the documented local development bearer token, not a secret.
+  '''dev-token''',
+  # placeholder used in .env.example / CI.
+  '''ci-placeholder''',
+  '''change-me''',
+]

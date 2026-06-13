@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS cc_tiers;
+DROP TABLE IF EXISTS cc_agents;
+DROP TABLE IF EXISTS cc_queues;

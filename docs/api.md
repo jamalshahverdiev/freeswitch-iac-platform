@@ -372,6 +372,58 @@ curl -s -OJ $API/api/v1/recordings/2026-06-04/conf_standup_18-12-36.wav "${H[@]}
 
 ---
 
+## Phone provisioning
+
+Desk phones fetch their config from the control-plane at boot
+(`GET /provision/<mac>`) instead of being configured by hand. A
+`provisioned_device` maps a MAC to an extension; the SIP password is **never
+stored on the device record** — it is read from the matching user
+(`params.password`) at render time, so rotating the user's password
+automatically reprovisions the phone.
+
+```bash
+# register a phone for extension 3001 (MAC accepts any separators/case)
+curl -s $API/api/v1/devices "${H[@]}" -d '{
+  "mac":"80:5e:c0:11:22:33","vendor":"yealink","model":"T46U",
+  "number":"3001","domain":"demo.test","display_name":"Reception"}'
+
+curl -s $API/api/v1/devices "${H[@]}"                       # list
+curl -s $API/api/v1/devices/805ec0112233 "${H[@]}"          # get (normalized mac)
+curl -s -X PUT $API/api/v1/devices/805ec0112233 "${H[@]}" -d '{"number":"3001","domain":"demo.test","vendor":"grandstream"}'
+curl -s -X DELETE $API/api/v1/devices/805ec0112233 "${H[@]}"
+```
+
+| field | type | required | notes |
+|---|---|---|---|
+| mac | string | yes | normalized to lowercase, no separators; unique |
+| number | string | yes | extension; its password comes from the matching user |
+| domain | string | yes | SIP domain the user lives in |
+| vendor | string | no | `yealink` (default) \| `grandstream` \| `generic` |
+| model | string | no | informational |
+| display_name | string | no | falls back to `number` |
+| enabled | bool | no | default `true`; a disabled device returns 404 from `/provision` |
+
+### The `/provision/<mac>` endpoint (phone-facing)
+
+This is the only endpoint a phone talks to, so it is **not** behind the bearer
+token. Because the rendered config contains the cleartext SIP password, it is
+guarded by **Basic auth (`PROVISION_USER`/`PROVISION_PASSWORD`) and/or a CIDR
+allowlist (`PROVISION_ALLOW_CIDRS`)**. The filename's vendor convention selects
+the format — `<mac>.cfg` (Yealink), `cfg<mac>.xml` (Grandstream), `<mac>.xml`
+(generic):
+
+```bash
+# what the phone fetches at boot
+curl -s -u "$PROVISION_USER:$PROVISION_PASSWORD" $API/provision/805ec0112233.cfg
+# -> Yealink account.1.* config with account.1.password read from user 3001
+```
+
+`PROVISION_SIP_SERVER`/`PROVISION_SIP_PORT` set the registrar the phone is
+pointed at (defaults to the device's domain and `5060`). Unknown/disabled MACs
+and users without a password return **404**.
+
+---
+
 ## XML endpoints (consumed by `mod_xml_curl`)
 
 `mod_xml_curl` POSTs `application/x-www-form-urlencoded`. Behaviour:

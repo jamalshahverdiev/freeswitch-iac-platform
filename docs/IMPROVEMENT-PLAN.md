@@ -239,11 +239,20 @@ Verified: grafana_ro reads all 3 DBs / write denied; Grafana :3000 up, 3 datasou
       hours→queue, else TTS "office closed"). Live-verified on a Sunday:
       Date/TimeMatch (FAIL) on wday=2-6 → falls through to the closed branch.
       FS wday numbering: 1=Sun..7=Sat (confirmed empirically). api-test 109.
-- [ ] **Phone provisioning** — `GET /provision/{mac}.xml` (or .cfg) endpoint
-      rendering vendor device configs from a new `provisioned_devices` table
-      (mac → user/line/server/codecs). Templates per vendor (Yealink,
-      Grandstream). Served over HTTP on the LAN (devices fetch on boot); guard
-      by MAC + network ACL. Terraform resource `freeswitch_device`.
+- [x] **Phone provisioning** — `GET /provision/{file}` renders vendor device
+      configs from a new `provisioned_devices` table (migration 000006; mac →
+      number/domain/vendor). MAC normalized (lowercase, no separators); filename
+      vendor convention `<mac>.cfg` (Yealink), `cfg<mac>.xml` (Grandstream),
+      `<mac>.xml` (generic). The SIP **password is NOT stored** — read from the
+      matching user at render time (rotate user pw ⇒ phone reprovisions). CRUD at
+      `/api/v1/devices` (bearer). `/provision/*` is phone-facing: guarded by
+      Basic auth (`PROVISION_USER`/`PASSWORD`) + CIDR allowlist
+      (`PROVISION_ALLOW_CIDRS`); `PROVISION_SIP_SERVER`/`PORT` set the registrar.
+      Terraform resource `freeswitch_device` (id=mac, ImportState by mac;
+      keeps config-supplied MAC to avoid a normalization diff) + matching data
+      source `freeswitch_device` (lookup by mac). Verified: api-test
+      126 asserts (incl. 401 no-auth, 404 unknown mac, Grandstream `<P35>3001</P35>`
+      rendered with user pw); provider acceptance create+import+update PASS.
 - [ ] **GitOps flow** — now that repos are public and the provider is published:
       a separate "PBX config" repo holding tofu + remote state; GitHub Actions
       runs `tofu plan` on PR and posts the diff as a comment, `tofu apply` on

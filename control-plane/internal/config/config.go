@@ -34,6 +34,13 @@ type Config struct {
 	RecURL      string
 	RecUser     string
 	RecPassword string
+	// Phone provisioning (GET /provision/*): guard + the SIP server phones
+	// register to. Provisioning configs carry the SIP password in cleartext.
+	ProvisionUser       string
+	ProvisionPassword   string
+	ProvisionAllowCIDRs []string
+	ProvisionSIPServer  string // host phones register to; defaults to the device domain
+	ProvisionSIPPort    string
 }
 
 func Load() (Config, error) {
@@ -54,6 +61,11 @@ func Load() (Config, error) {
 		RecURL:          env("REC_URL", ""),
 		RecUser:         env("REC_USER", "recordings"),
 		RecPassword:     env("REC_PASSWORD", ""),
+		ProvisionUser:       env("PROVISION_USER", "provision"),
+		ProvisionPassword:   env("PROVISION_PASSWORD", ""),
+		ProvisionAllowCIDRs: splitCSV(env("PROVISION_ALLOW_CIDRS", "")),
+		ProvisionSIPServer:  env("PROVISION_SIP_SERVER", ""),
+		ProvisionSIPPort:    env("PROVISION_SIP_PORT", "5060"),
 	}
 	if cfg.DatabaseURL == "" {
 		return cfg, fmt.Errorf("DATABASE_URL is required")

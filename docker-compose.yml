@@ -60,6 +60,11 @@ services:
       REC_URL: ${REC_URL:-http://192.168.48.143:8088}
       REC_USER: ${REC_USER:-recordings}
       REC_PASSWORD: ${REC_PASSWORD:-}
+      # Phone provisioning (GET /provision/<mac>): guard + SIP server phones register to.
+      PROVISION_USER: ${PROVISION_USER:-provision}
+      PROVISION_PASSWORD: ${PROVISION_PASSWORD:-}
+      PROVISION_ALLOW_CIDRS: ${PROVISION_ALLOW_CIDRS:-}
+      PROVISION_SIP_SERVER: ${PROVISION_SIP_SERVER:-}
     volumes:
       - ./deploy/tls:/tls:ro
     ports:

@@ -130,6 +130,30 @@ func TestValidationRejectsBeforeStore(t *testing.T) {
 	}
 }
 
+func TestCDRParseBadPayload(t *testing.T) {
+	// POST /cdr is behind xmlGuard; with no guard configured it is open in
+	// tests, so we can exercise the parser. A non-cdr body must 400 (dropped,
+	// not retried), and a payload with no uuid must 400.
+	h := testServer(t, Options{})
+	for _, body := range []string{`{"not":"a cdr"}`, `{"variables":{}}`, `not json`} {
+		req := httptest.NewRequest(http.MethodPost, "/cdr", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("body %q: got %d want 400", body, rec.Code)
+		}
+	}
+}
+
+func TestCDRListBadPagination(t *testing.T) {
+	h := testServer(t, Options{})
+	rec := do(t, h, http.MethodGet, "/api/v1/cdr?limit=bad", "test-token", "")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("got %d want 400", rec.Code)
+	}
+}
+
 func TestRuntimeRequiresESL(t *testing.T) {
 	h := testServer(t, Options{})
 	tok := "test-token"

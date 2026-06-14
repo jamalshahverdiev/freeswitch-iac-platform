@@ -84,6 +84,48 @@
       "datasource": { "type": "postgres", "uid": "fs_core" },
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 15 },
       "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT sip_user, sip_host, network_ip, network_port, user_agent, to_timestamp(expires) AS expires FROM sip_registrations ORDER BY sip_user;" } ]
+    },
+
+    {
+      "id": 30, "type": "stat", "title": "Calls today (CDR)",
+      "datasource": { "type": "postgres", "uid": "fs_control" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 23 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT count(*) AS \"calls today\" FROM cdr WHERE start_epoch >= extract(epoch FROM date_trunc('day', now()));" } ]
+    },
+    {
+      "id": 31, "type": "stat", "title": "Answered today",
+      "datasource": { "type": "postgres", "uid": "fs_control" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 23 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT count(*) AS \"answered\" FROM cdr WHERE billsec > 0 AND start_epoch >= extract(epoch FROM date_trunc('day', now()));" } ]
+    },
+    {
+      "id": 32, "type": "stat", "title": "Abandoned today",
+      "datasource": { "type": "postgres", "uid": "fs_control" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 23 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1 } ] } } },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT count(*) AS \"abandoned\" FROM cdr WHERE billsec = 0 AND start_epoch >= extract(epoch FROM date_trunc('day', now()));" } ]
+    },
+    {
+      "id": 33, "type": "stat", "title": "Talk time today (min)",
+      "datasource": { "type": "postgres", "uid": "fs_control" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 23 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT round(COALESCE(sum(billsec),0)/60.0, 1) AS \"talk min\" FROM cdr WHERE start_epoch >= extract(epoch FROM date_trunc('day', now()));" } ]
+    },
+    {
+      "id": 34, "type": "barchart", "title": "Calls per day (14d)",
+      "datasource": { "type": "postgres", "uid": "fs_control" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 27 },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT to_char(to_timestamp(start_epoch) AT TIME ZONE 'UTC','YYYY-MM-DD') AS day, count(*) FILTER (WHERE billsec>0) AS answered, count(*) FILTER (WHERE billsec=0) AS abandoned FROM cdr WHERE start_epoch >= extract(epoch FROM now() - interval '14 days') GROUP BY day ORDER BY day;" } ]
+    },
+    {
+      "id": 35, "type": "table", "title": "Recent calls",
+      "datasource": { "type": "postgres", "uid": "fs_control" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 27 },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT to_timestamp(start_epoch) AS start, caller_id_number AS caller, destination_number AS dest, hangup_cause AS cause, billsec FROM cdr ORDER BY start_epoch DESC LIMIT 50;" } ]
     }
   ]
 }

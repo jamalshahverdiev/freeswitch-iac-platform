@@ -122,12 +122,12 @@ freeswitch"). Revisit only if the lab turns into a real deployment.
       by (context, priority, name), so order is stable without this constraint.
 - [x] Secrets hygiene (DONE in Phase 0 git split): all creds in age-encrypted
       deploy/SECRETS.md.age; HANDOFF references it; literals scrubbed from code.
-- [ ] hack/secrets.sh: encrypt only files whose plaintext actually changed.
-      Right now `encrypt` re-writes every *.age, and age uses a random nonce, so
-      unchanged secrets still show as git-modified (noisy diffs, e.g. tls.tar.age
-      after the D1 work). Fix: before writing <f>.age, decrypt the existing one
-      and skip if the plaintext is byte-identical (compare hashes). Harmless as-is
-      (content is unchanged), purely a diff-hygiene improvement.
+- [x] hack/secrets.sh: encrypt only changed files (DONE 2026-06-14). `encrypt`
+      now decrypts each existing <f>.age and skips if the plaintext is byte-
+      identical (cmp); for tls.tar.age it compares a content signature (sorted
+      per-file sha256, ignoring tar mtimes). Output prints `unchanged:` vs
+      `encrypted:`; idempotent (2nd run rewrites 0 files). Kills the noisy
+      .age diffs.
 - [ ] ESL hardening (optional): document the plaintext-password risk; ACL is
       the current mitigation; consider stunnel/wireguard if it ever leaves
       the lab.
@@ -167,7 +167,13 @@ freeswitch_control.*), so this is mostly wiring + dashboard JSON.
 
 Verified: grafana_ro reads all 3 DBs / write denied; Grafana :3000 up, 3 datasources provisioned, dashboard fs-noc loaded, live query through Grafana returned agents=2 (status 200). Docs: docs/observability.md. NOTE step 5 screenshot still TODO (user to add).
 
-- [ ] **C1 CDR via mod_json_cdr** → control-plane `/cdr` (mTLS+Basic like
+- [x] **C1 CDR via mod_json_cdr** — DONE 2026-06-14 (branch C1). POST /cdr
+      (mTLS+Basic, idempotent on uuid, parses variables + callflow.caller_profile)
+      -> cdr table in freeswitch_control; GET /api/v1/cdr (filters+pagination,
+      X-Total-Count) + /cdr/stats (per-day). mod_json_cdr loaded on server
+      (deploy/freeswitch/json_cdr.conf.xml.age, retry-spool). Grafana CDR panels
+      added. api-test 103/103 + handler tests. ORIGINAL:
+- [ ] (orig) **C1 CDR via mod_json_cdr** → control-plane `/cdr` (mTLS+Basic like
       /xml) → cdr table + `GET /api/v1/cdr` + stats; Grafana panels on top.
       Steps: load mod_json_cdr on the FS host (`json_cdr.conf.xml` → url
       `https://172.31.30.216:8080/cdr`, same client cert + creds as xml_curl,

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FreeSWITCH NOC — Wallboard</title>
+<style>
+  :root { --bg:#0f1419; --card:#1b2430; --fg:#e6edf3; --muted:#8b98a5;
+          --green:#2ea043; --orange:#d29922; --red:#da3633; --blue:#388bfd; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.4 system-ui,sans-serif; background:var(--bg); color:var(--fg); }
+  header { display:flex; align-items:center; gap:12px; padding:12px 20px; background:var(--card); }
+  header h1 { font-size:18px; margin:0; flex:1; }
+  #status { font-size:12px; color:var(--muted); }
+  #status.live { color:var(--green); }
+  #status.down { color:var(--red); }
+  .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; padding:20px; }
+  .tile { background:var(--card); border-radius:10px; padding:16px; }
+  .tile .n { font-size:42px; font-weight:700; }
+  .tile .l { color:var(--muted); text-transform:uppercase; font-size:11px; letter-spacing:.5px; }
+  .wide { grid-column:span 2; }
+  table { width:100%; border-collapse:collapse; }
+  th,td { text-align:left; padding:6px 8px; border-bottom:1px solid #2a3441; font-size:13px; }
+  th { color:var(--muted); font-weight:600; }
+  .pill { padding:2px 8px; border-radius:10px; font-size:12px; }
+  .Available,.Waiting { background:rgba(46,160,67,.2); color:var(--green); }
+  .On.Break,.Logged.Out { background:rgba(210,153,34,.2); color:var(--orange); }
+  .gate { padding:40px 20px; max-width:420px; margin:0 auto; }
+  .gate input { width:100%; padding:10px; margin:8px 0; background:#0d1117; color:var(--fg);
+                border:1px solid #2a3441; border-radius:6px; }
+  .gate button { padding:10px 18px; background:var(--blue); color:#fff; border:0; border-radius:6px; cursor:pointer; }
+  #log { font-family:ui-monospace,monospace; font-size:12px; max-height:240px; overflow:auto; }
+  .muted { color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>📞 FreeSWITCH NOC — Wallboard</h1>
+  <span id="status">offline</span>
+  <button id="logout" style="display:none">logout</button>
+</header>
+
+<div id="gate" class="gate">
+  <p>Enter the control-plane API token to start the live feed.</p>
+  <input id="token" type="password" placeholder="API token (Bearer)" autocomplete="off">
+  <button id="connect">Connect</button>
+  <p id="err" style="color:var(--red)"></p>
+</div>
+
+<main id="board" style="display:none">
+  <div class="grid">
+    <div class="tile"><div class="n" id="m-calls">0</div><div class="l">Active calls</div></div>
+    <div class="tile"><div class="n" id="m-waiting">0</div><div class="l">Queue waiting</div></div>
+    <div class="tile"><div class="n" id="m-agents">0</div><div class="l">Agents online</div></div>
+    <div class="tile"><div class="n" id="m-total">0</div><div class="l">Calls since open</div></div>
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;">
+    <div class="tile wide">
+      <div class="l">Active calls</div>
+      <table><thead><tr><th>Caller</th><th>→ Dest</th><th>Dir</th><th>Duration</th></tr></thead>
+        <tbody id="calls"><tr><td colspan="4" class="muted">none</td></tr></tbody></table>
+    </div>
+    <div class="tile wide">
+      <div class="l">Agents</div>
+      <table><thead><tr><th>Agent</th><th>Status</th></tr></thead>
+        <tbody id="agents"><tr><td colspan="2" class="muted">waiting for events…</td></tr></tbody></table>
+    </div>
+  </div>
+  <div class="grid" style="grid-template-columns:1fr;">
+    <div class="tile"><div class="l">Event log</div><div id="log"></div></div>
+  </div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const calls = new Map();      // uuid -> {caller,dest,dir,since}
+const agents = new Map();     // name -> status
+let totalCalls = 0, waiting = 0;
+
+function fmtDur(since){ const s=Math.floor((Date.now()-since)/1000); return (s/60|0)+":"+String(s%60).padStart(2,'0'); }
+function render(){
+  $('#m-calls').textContent = calls.size;
+  $('#m-total').textContent = totalCalls;
+  $('#m-waiting').textContent = waiting;
+  $('#m-agents').textContent = [...agents.values()].filter(s=>s==='Available').length;
+  $('#calls').innerHTML = calls.size ? [...calls.entries()].map(([u,c])=>
+    `<tr><td>${c.caller||'?'}</td><td>${c.dest||'?'}</td><td>${c.dir||''}</td><td>${fmtDur(c.since)}</td></tr>`).join('')
+    : '<tr><td colspan="4" class="muted">none</td></tr>';
+  $('#agents').innerHTML = agents.size ? [...agents.entries()].sort().map(([n,s])=>
+    `<tr><td>${n}</td><td><span class="pill ${s.replace(/ /g,'.')}">${s}</span></td></tr>`).join('')
+    : '<tr><td colspan="2" class="muted">waiting for events…</td></tr>';
+}
+function logLine(e){
+  const el=$('#log'); const t=new Date(e.ts*1000).toLocaleTimeString();
+  el.insertAdjacentHTML('afterbegin', `<div><span class="muted">${t}</span> <b>${e.type}</b> ${JSON.stringify(e.data)}</div>`);
+  while(el.childElementCount>200) el.lastElementChild.remove();
+}
+function apply(e){
+  const d=e.data||{};
+  switch(e.type){
+    case 'call.started': calls.set(d.uuid,{caller:d.caller,dest:d.destination,dir:d.direction,since:Date.now()}); totalCalls++; break;
+    case 'call.answered': if(calls.has(d.uuid)) Object.assign(calls.get(d.uuid),{answered:true}); break;
+    case 'call.ended': calls.delete(d.uuid); break;
+    case 'agent.status': if(d.agent) agents.set(d.agent,d.status||'?'); break;
+    case 'queue.member':
+      if(d.action&&/join/i.test(d.action)) waiting++;
+      else if(d.action&&/(abandon|bridge|leave|exit)/i.test(d.action)) waiting=Math.max(0,waiting-1);
+      break;
+  }
+  logLine(e); render();
+}
+
+async function stream(token){
+  const res = await fetch('/api/v1/events', {headers:{Authorization:'Bearer '+token}});
+  if(!res.ok){ throw new Error('HTTP '+res.status); }
+  $('#status').textContent='live'; $('#status').className='live';
+  const reader=res.body.getReader(); const dec=new TextDecoder(); let buf='';
+  for(;;){
+    const {value,done}=await reader.read(); if(done) break;
+    buf+=dec.decode(value,{stream:true});
+    let i;
+    while((i=buf.indexOf('\n\n'))>=0){
+      const block=buf.slice(0,i); buf=buf.slice(i+2);
+      const line=block.split('\n').find(l=>l.startsWith('data:'));
+      if(line){ try{ apply(JSON.parse(line.slice(5).trim())); }catch(_){} }
+    }
+  }
+}
+async function run(token){
+  $('#gate').style.display='none'; $('#board').style.display='block'; $('#logout').style.display='inline';
+  for(;;){
+    try{ await stream(token); }
+    catch(e){
+      $('#status').textContent='reconnecting…'; $('#status').className='down';
+      if(String(e).includes('401')){ logout('bad token'); return; }
+    }
+    await new Promise(r=>setTimeout(r,2000));
+  }
+}
+function logout(msg){
+  sessionStorage.removeItem('fs_token');
+  $('#board').style.display='none'; $('#gate').style.display='block';
+  $('#logout').style.display='none'; $('#err').textContent=msg||'';
+}
+$('#connect').onclick=()=>{ const t=$('#token').value.trim(); if(!t) return;
+  sessionStorage.setItem('fs_token',t); $('#err').textContent=''; run(t); };
+$('#logout').onclick=()=>logout();
+setInterval(render,1000); // refresh durations
+const saved=sessionStorage.getItem('fs_token'); if(saved) run(saved);
+</script>
+</body>
+</html>

@@ -112,6 +112,7 @@ Maintainers with the age key instead run `hack/secrets.sh decrypt`.
 - [WebRTC](docs/webrtc.md) / [Webphone](docs/webphone.md)
 - [IVR audio & TTS](docs/ivr-audio.md), [custom prompts](docs/howto-custom-prompt.md)
 - [Observability (Grafana NOC dashboard)](docs/observability.md)
+- [Live events (SSE) & supervisor wallboard](docs/api.md)
 - [Roadmap / improvement plan](docs/IMPROVEMENT-PLAN.md)
 
 ## Make targets

@@ -198,6 +198,21 @@ func TestEventsSSE(t *testing.T) {
 	}
 }
 
+func TestWallboardServed(t *testing.T) {
+	h := testServer(t, Options{})
+	// public, no token needed (it's the HTML shell)
+	rec := do(t, h, http.MethodGet, "/wallboard", "", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("got %d want 200", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+		t.Errorf("content-type = %q", ct)
+	}
+	if !strings.Contains(rec.Body.String(), "/api/v1/events") {
+		t.Error("wallboard does not reference the events stream")
+	}
+}
+
 func TestEventsDisabledWithoutHub(t *testing.T) {
 	h := testServer(t, Options{}) // no Hub
 	rec := do(t, h, http.MethodGet, "/api/v1/events", "test-token", "")

@@ -87,6 +87,10 @@ func (s *Server) Router() http.Handler {
 	r.Get("/healthz", s.handleHealthz)
 	r.Get("/readyz", s.handleReadyz)
 
+	// Supervisor wallboard (static HTML shell; auth happens in-browser for the
+	// /api/v1/events fetch). Live data comes from the SSE stream.
+	r.Get("/wallboard", s.handleWallboard)
+
 	// FreeSWITCH-facing XML endpoints. Protected by Basic auth and/or an IP
 	// allowlist (they expose SIP/trunk secrets), consumed by mod_xml_curl.
 	r.Group(func(r chi.Router) {

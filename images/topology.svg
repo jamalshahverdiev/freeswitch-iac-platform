@@ -1,0 +1,346 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3000" height="2000" viewBox="0 0 3000 2000">
+<defs>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.16"/>
+  </filter>
+  <linearGradient id="zoneA" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stop-color="#f7fbff"/><stop offset="100%" stop-color="#eef6ff"/></linearGradient>
+  <linearGradient id="zoneB" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stop-color="#f6fff7"/><stop offset="100%" stop-color="#eefbf0"/></linearGradient>
+  <linearGradient id="router" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#f3f4f7"/></linearGradient>
+  <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M1,1 L9,5 L1,9 z" fill="#0b4eb3"/></marker>
+  <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M1,1 L9,5 L1,9 z" fill="#138a21"/></marker>
+  <marker id="arrow-orange" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M1,1 L9,5 L1,9 z" fill="#e65f00"/></marker>
+  <marker id="arrow-purple" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M1,1 L9,5 L1,9 z" fill="#7b2cbf"/></marker>
+  <marker id="arrow-black" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M1,1 L9,5 L1,9 z" fill="#1d2433"/></marker>
+</defs>
+<style>
+  .title { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 48px; font-weight: 800; fill: #111827; }
+  .zone-title { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 32px; font-weight: 800; }
+  .zone-sub { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 20px; font-weight: 700; }
+  .box-title { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 26px; font-weight: 800; fill: #111827; }
+  .box-title-small { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 21px; font-weight: 800; fill: #111827; }
+  .module-title { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 22px; font-weight: 800; fill: #111827; }
+  .text { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 16px; fill: #111827; }
+  .text-small { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 14px; fill: #111827; }
+  .text-tiny { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 12px; fill: #111827; }
+  .label { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 15px; font-weight: 800; }
+  .label-small { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 12.5px; font-weight: 700; }
+  .badge { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 17px; font-weight: 900; }
+  .italic { font-style: italic; }
+</style>
+<rect x="0" y="0" width="3000" height="2000" fill="#ffffff"/>
+
+<text x="1500.0" y="55" class="title" text-anchor="middle">FreeSWITCH IaC Platform — System Topology</text>
+<rect x="50" y="80" width="660" height="1125" rx="14" fill="url(#zoneA)" stroke="#0b4eb3" stroke-width="2.5"/>
+<text x="380.0" y="128" class="zone-title" text-anchor="middle" style=" fill:#0b3d91;">Zone A — Dev / Control box</text>
+<text x="380.0" y="160" class="zone-sub" text-anchor="middle" style=" fill:#0b3d91;">(WSL2 Debian, 172.31.30.216)</text>
+<rect x="1510" y="80" width="650" height="1125" rx="14" fill="url(#zoneB)" stroke="#0b6b16" stroke-width="2.5"/>
+<text x="1835.0" y="128" class="zone-title" text-anchor="middle" style=" fill:#0b6b16;">Zone B — FreeSWITCH server</text>
+<text x="1835.0" y="160" class="zone-sub" text-anchor="middle" style=" fill:#0b6b16;">(Debian 13, 192.168.48.143)</text>
+<rect x="1215" y="120" width="220" height="1040" rx="14" fill="url(#router)" stroke="#6b7280" stroke-width="2" filter="url(#shadow)"/>
+<ellipse cx="1325.0" cy="190" rx="52" ry="36" fill="#374151" stroke="#1f2937" stroke-width="2"/>
+<text x="1325.0" y="198" class="badge" text-anchor="middle" style=" fill:white;">NAT</text>
+<text x="1325.0" y="265" class="box-title-small" text-anchor="middle" style=" font-weight:800;">joins 172.31.x</text>
+<text x="1325.0" y="297" class="box-title-small" text-anchor="middle" style=" font-weight:800;">↔ 192.168.48.x</text>
+<line x1="1240" y1="340" x2="1410" y2="340" stroke="#9ca3af" stroke-width="2"/>
+<text x="1325.0" y="395" class="box-title-small" text-anchor="middle" style=" font-weight:800;">SNAT Zone A →</text>
+<text x="1325.0" y="432" class="box-title-small" text-anchor="middle" style=" font-weight:800;">Zone B as</text>
+<text x="1325.0" y="470" class="box-title-small" text-anchor="middle" style=" font-weight:800;">192.168.48.1</text>
+<path d="M 1540 640 C 1455 640 1430 610 1415 565 C 1360 400 1080 250 670 275" fill="none" stroke="#7b2cbf" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.78" marker-end="url(#arrow-purple)"/>
+<path d="M 670 540 C 720 480 720 330 670 305" fill="none" stroke="#7b2cbf" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" stroke-dasharray="8 7" marker-end="url(#arrow-purple)"/>
+<path d="M 1540 408 C 1400 405 1170 395 965 388 C 820 382 720 450 670 505" fill="none" stroke="#138a21" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" stroke-dasharray="10 9" marker-end="url(#arrow-green)"/>
+<path d="M 350 390 L 350 365" fill="none" stroke="#0b4eb3" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="1" marker-end="url(#arrow-blue)"/>
+<path d="M 670 1068 C 735 980 735 690 670 548" fill="none" stroke="#0b4eb3" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round" opacity="1" stroke-dasharray="10 7" marker-end="url(#arrow-blue)"/>
+<path d="M 670 540 C 880 540 1170 535 1540 514" fill="none" stroke="#0b4eb3" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" opacity="1" marker-end="url(#arrow-blue)"/>
+<path d="M 670 610 C 950 890 1200 1040 1540 1128" fill="none" stroke="#0b4eb3" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round" opacity="1" stroke-dasharray="10 7" marker-end="url(#arrow-blue)"/>
+<path d="M 2180 760 C 1850 990 1100 1105 670 760" fill="none" stroke="#0b4eb3" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round" opacity="1" stroke-dasharray="10 7" marker-end="url(#arrow-blue)"/>
+<path d="M 1540 590 C 1340 590 980 585 670 565" fill="none" stroke="#138a21" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" stroke-dasharray="8 6" marker-end="url(#arrow-green)"/>
+<path d="M 670 475 C 1040 300 1770 515 2180 635" fill="none" stroke="#0b4eb3" stroke-width="3.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" stroke-dasharray="11 8" marker-end="url(#arrow-blue)"/>
+<path d="M 2180 865 C 1760 1090 1020 1025 670 585" fill="none" stroke="#e65f00" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" stroke-dasharray="9 7" marker-end="url(#arrow-orange)"/>
+<path d="M 2180 265 C 2130 270 2110 300 2110 310 C 2070 330 2070 340 2110 360 C 2070 380 2070 775 2110 910" fill="none" stroke="#e65f00" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" opacity="1" marker-end="url(#arrow-orange)"/>
+<path d="M 2180 520 C 2125 515 2100 475 2110 335" fill="none" stroke="#e65f00" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="1" marker-end="url(#arrow-orange)"/>
+<path d="M 2180 1030 C 2130 1025 2115 1018 2110 1012" fill="none" stroke="#e65f00" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" opacity="1" marker-end="url(#arrow-orange)"/>
+<rect x="80" y="175" width="590" height="205" rx="14" fill="white" stroke="#374151" stroke-width="2" filter="url(#shadow)"/>
+<circle cx="135" cy="277.5" r="42" fill="#ffffff" stroke="#0b4eb3" stroke-width="4"/>
+<text x="135" y="283.5" class="badge" text-anchor="middle" style=" fill:#0b4eb3;">PG</text>
+<text x="195" y="213" class="box-title" text-anchor="start" style=" fill:#111827; font-weight:800;">PostgreSQL</text>
+<text x="195" y="241" class="text-small" text-anchor="start">172.31.30.216:5432; postgres:16 (Docker)</text>
+<text x="195" y="259" class="text-small" text-anchor="start">DBs: freeswitch_control — desired state;</text>
+<text x="195" y="277" class="text-small" text-anchor="start">freeswitch_callcenter — mod_callcenter runtime;</text>
+<text x="195" y="295" class="text-small" text-anchor="start">freeswitch_core — core db + sofia +</text>
+<text x="195" y="313" class="text-small" text-anchor="start">fifo/db/voicemail + voicemail_msgs</text>
+<text x="195" y="331" class="text-small" text-anchor="start">Control Plane uses a separate read-only core pool</text>
+<text x="195" y="349" class="text-small" text-anchor="start">for voicemail read API.</text>
+<rect x="80" y="405" width="590" height="255" rx="14" fill="white" stroke="#374151" stroke-width="2" filter="url(#shadow)"/>
+<circle cx="135" cy="532.5" r="42" fill="#ffffff" stroke="#0b4eb3" stroke-width="4"/>
+<text x="135" y="538.5" class="badge" text-anchor="middle" style=" fill:#0b4eb3;">API</text>
+<text x="195" y="443" class="box-title" text-anchor="start" style=" fill:#111827; font-weight:800;">Control Plane API</text>
+<text x="195" y="471" class="text-small" text-anchor="start">172.31.30.216:8080 (HTTPS)</text>
+<text x="195" y="489" class="text-small" text-anchor="start">Go (chi, pgx), Docker. REST API + XML renderer</text>
+<text x="195" y="507" class="text-small" text-anchor="start">(directory / dialplan / configuration incl.</text>
+<text x="195" y="525" class="text-small" text-anchor="start">callcenter.conf, conference.conf, voicemail.conf)</text>
+<text x="195" y="543" class="text-small" text-anchor="start">+ ESL client + audit + CDR ingest/query + live</text>
+<text x="195" y="561" class="text-small" text-anchor="start">events (SSE) + supervisor wallboard</text>
+<text x="195" y="579" class="text-small" text-anchor="start">+ phone provisioning + voicemail read API + call-</text>
+<text x="195" y="597" class="text-small" text-anchor="start">recording proxy + list pagination.</text>
+<rect x="80" y="685" width="590" height="145" rx="14" fill="white" stroke="#374151" stroke-width="2" filter="url(#shadow)"/>
+<circle cx="135" cy="757.5" r="42" fill="#ffffff" stroke="#0b4eb3" stroke-width="4"/>
+<text x="135" y="763.5" class="badge" text-anchor="middle" style=" fill:#0b4eb3;">WEB</text>
+<text x="195" y="723" class="box-title" text-anchor="start" style=" fill:#111827; font-weight:800;">webphone</text>
+<text x="195" y="751" class="text-small" text-anchor="start">Browser-Phone (WebRTC softphone), nginx</text>
+<text x="195" y="769" class="text-small" text-anchor="start">https://172.31.30.216:8443 (8443→443)</text>
+<text x="195" y="787" class="text-small" text-anchor="start">audio + video; served by Docker Compose</text>
+<rect x="80" y="850" width="590" height="130" rx="14" fill="white" stroke="#374151" stroke-width="2" filter="url(#shadow)"/>
+<circle cx="135" cy="915.0" r="42" fill="#ffffff" stroke="#f97316" stroke-width="4"/>
+<text x="135" y="921.0" class="badge" text-anchor="middle" style=" fill:#f97316;">GF</text>
+<text x="195" y="888" class="box-title" text-anchor="start" style=" fill:#111827; font-weight:800;">Grafana — NOC dashboard</text>
+<text x="195" y="916" class="text-small" text-anchor="start">http://localhost:3000</text>
+<text x="195" y="934" class="text-small" text-anchor="start">Reads all 3 PostgreSQL DBs read-only via grafana_ro</text>
+<text x="195" y="952" class="text-small" text-anchor="start">role</text>
+<text x="195" y="970" class="text-small" text-anchor="start">Runs in the same Docker Compose</text>
+<rect x="80" y="1000" width="590" height="145" rx="14" fill="white" stroke="#374151" stroke-width="2" filter="url(#shadow)"/>
+<circle cx="135" cy="1072.5" r="42" fill="#ffffff" stroke="#7b2cbf" stroke-width="4"/>
+<text x="135" y="1078.5" class="badge" text-anchor="middle" style=" fill:#7b2cbf;">TF</text>
+<text x="195" y="1038" class="box-title" text-anchor="start" style=" fill:#111827; font-weight:800;">Terraform / OpenTofu + provider</text>
+<text x="195" y="1066" class="text-small" text-anchor="start">local CLI; terraform-provider-freeswitch</text>
+<text x="195" y="1084" class="text-small" text-anchor="start">PUBLISHED:</text>
+<text x="195" y="1102" class="text-small" text-anchor="start">registry.terraform.io/jamalshahverdiev/freeswitch</text>
+<text x="195" y="1120" class="text-small" text-anchor="start">v0.1.1</text>
+<text x="195" y="1138" class="text-small" text-anchor="start">local dev still via dev_overrides</text>
+<rect x="70" y="1158" width="610" height="35" rx="8" fill="#f7fbff" stroke="#0b4eb3" stroke-width="1.8"/>
+<text x="85" y="1182" class="text-small" text-anchor="start" style=" fill:#0b3d91;">Docker Compose runs postgres + control-plane + webphone + grafana. Control Plane publishes</text>
+<text x="85" y="1198" class="text-small" text-anchor="start" style=" fill:#0b3d91;">:8080, webphone :8443, Grafana :3000, Postgres :5432 (local use).</text>
+<rect x="1540" y="175" width="580" height="990" rx="14" fill="#ffffff" stroke="#374151" stroke-width="2" filter="url(#shadow)"/>
+<text x="1830" y="220" class="box-title" text-anchor="middle" style=" font-weight:800;">FreeSWITCH 1.11.1</text>
+<text x="1830" y="252" class="box-title-small" text-anchor="middle" style=" fill:#0b6b16; font-weight:800;">192.168.48.143</text>
+<text x="1830" y="277" class="text-small" text-anchor="middle">SIP switch / media / IVR</text>
+<rect x="1560" y="300" width="540" height="72" rx="15" fill="#fffaf6" stroke="#e65f00" stroke-width="2.4"/>
+<circle cx="1608" cy="336.0" r="32" fill="#ffffff" stroke="#e65f00" stroke-width="4"/>
+<text x="1608" y="342.0" class="badge" text-anchor="middle" style=" fill:#e65f00;">SIP</text>
+<text x="1655" y="333" class="module-title" text-anchor="start" style=" fill:#e65f00; font-weight:800;">mod_sofia (SIP)</text>
+<text x="1655" y="356" class="text-small" text-anchor="start">5060/udp,tcp internal; 5080 external; WSS 7443</text>
+<text x="1655" y="373" class="text-small" text-anchor="start">SIP registrar / profiles</text>
+<rect x="1560" y="382" width="540" height="72" rx="15" fill="#f8fff8" stroke="#138a21" stroke-width="2.4"/>
+<circle cx="1608" cy="418.0" r="32" fill="#ffffff" stroke="#138a21" stroke-width="4"/>
+<text x="1608" y="424.0" class="badge" text-anchor="middle" style=" fill:#138a21;">XML</text>
+<text x="1655" y="415" class="module-title" text-anchor="start" style=" fill:#138a21; font-weight:800;">mod_xml_curl</text>
+<text x="1655" y="438" class="text-small" text-anchor="start">Fetches directory + dialplan (live). Control Plane can</text>
+<text x="1655" y="455" class="text-small" text-anchor="start">also render</text>
+<text x="1655" y="472" class="text-small" text-anchor="start">callcenter/conference/voicemail.conf, but configuration</text>
+<text x="1655" y="489" class="text-small" text-anchor="start">binding is off by default</text>
+<text x="1655" y="506" class="text-small" text-anchor="start">on-disk authoritative</text>
+<rect x="1560" y="464" width="540" height="72" rx="15" fill="#f7fbff" stroke="#0b4eb3" stroke-width="2.4"/>
+<circle cx="1608" cy="500.0" r="32" fill="#ffffff" stroke="#0b4eb3" stroke-width="4"/>
+<text x="1608" y="506.0" class="badge" text-anchor="middle" style=" fill:#0b4eb3;">ESL</text>
+<text x="1655" y="497" class="module-title" text-anchor="start" style=" fill:#0b3d91; font-weight:800;">mod_event_socket (ESL)</text>
+<text x="1655" y="520" class="text-small" text-anchor="start">192.168.48.143:8021/tcp</text>
+<text x="1655" y="537" class="text-small" text-anchor="start">Runtime command channel</text>
+<rect x="1560" y="546" width="540" height="72" rx="15" fill="#f8fff8" stroke="#138a21" stroke-width="2.4"/>
+<circle cx="1608" cy="582.0" r="32" fill="#ffffff" stroke="#138a21" stroke-width="4"/>
+<text x="1608" y="588.0" class="badge" text-anchor="middle" style=" fill:#138a21;">CDR</text>
+<text x="1655" y="579" class="module-title" text-anchor="start" style=" fill:#138a21; font-weight:800;">mod_json_cdr</text>
+<text x="1655" y="602" class="text-small" text-anchor="start">Posts a JSON CDR to the Control Plane</text>
+<text x="1655" y="619" class="text-small" text-anchor="start">when each call ends.</text>
+<rect x="1560" y="628" width="540" height="72" rx="15" fill="#fcf9ff" stroke="#7b2cbf" stroke-width="2.4"/>
+<circle cx="1608" cy="664.0" r="32" fill="#ffffff" stroke="#7b2cbf" stroke-width="4"/>
+<text x="1608" y="670.0" class="badge" text-anchor="middle" style=" fill:#7b2cbf;">CC</text>
+<text x="1655" y="661" class="module-title" text-anchor="start" style=" fill:#7b2cbf; font-weight:800;">mod_callcenter</text>
+<text x="1655" y="684" class="text-small" text-anchor="start">Queues / agents / tiers</text>
+<text x="1655" y="701" class="text-small" text-anchor="start">Runtime state in PostgreSQL via ODBC</text>
+<rect x="1560" y="710" width="540" height="72" rx="15" fill="#fcf9ff" stroke="#7b2cbf" stroke-width="2.4"/>
+<circle cx="1608" cy="746.0" r="32" fill="#ffffff" stroke="#7b2cbf" stroke-width="4"/>
+<text x="1608" y="752.0" class="badge" text-anchor="middle" style=" fill:#7b2cbf;">VM</text>
+<text x="1655" y="743" class="module-title" text-anchor="start" style=" fill:#7b2cbf; font-weight:800;">mod_voicemail</text>
+<text x="1655" y="766" class="text-small" text-anchor="start">Voicemail; message store in PostgreSQL freeswitch_core</text>
+<text x="1655" y="783" class="text-small" text-anchor="start">via ODBC</text>
+<text x="1655" y="800" class="text-small" text-anchor="start">Mailbox params vm-* come from directory</text>
+<rect x="1560" y="792" width="540" height="72" rx="15" fill="#fcf9ff" stroke="#7b2cbf" stroke-width="2.4"/>
+<circle cx="1608" cy="828.0" r="32" fill="#ffffff" stroke="#7b2cbf" stroke-width="4"/>
+<text x="1608" y="834.0" class="badge" text-anchor="middle" style=" fill:#7b2cbf;">CONF</text>
+<text x="1655" y="825" class="module-title" text-anchor="start" style=" fill:#7b2cbf; font-weight:800;">mod_conference</text>
+<text x="1655" y="848" class="text-small" text-anchor="start">Audio + video conferences</text>
+<text x="1655" y="865" class="text-small" text-anchor="start">Mux / grid layout</text>
+<rect x="1560" y="874" width="540" height="72" rx="15" fill="#fcf9ff" stroke="#7b2cbf" stroke-width="2.4"/>
+<circle cx="1608" cy="910.0" r="32" fill="#ffffff" stroke="#7b2cbf" stroke-width="4"/>
+<text x="1608" y="916.0" class="badge" text-anchor="middle" style=" fill:#7b2cbf;">TTS</text>
+<text x="1655" y="907" class="module-title" text-anchor="start" style=" fill:#7b2cbf; font-weight:800;">mod_tts_commandline (Piper)</text>
+<text x="1655" y="930" class="text-small" text-anchor="start">Neural TTS for IVR — primary</text>
+<rect x="1560" y="956" width="540" height="72" rx="15" fill="#fcf9ff" stroke="#7b2cbf" stroke-width="2.4"/>
+<circle cx="1608" cy="992.0" r="32" fill="#ffffff" stroke="#7b2cbf" stroke-width="4"/>
+<text x="1608" y="998.0" class="badge" text-anchor="middle" style=" fill:#7b2cbf;">FLITE</text>
+<text x="1655" y="989" class="module-title" text-anchor="start" style=" fill:#7b2cbf; font-weight:800;">mod_flite (TTS fallback)</text>
+<text x="1655" y="1012" class="text-small" text-anchor="start">Text-to-speech for IVR</text>
+<rect x="1560" y="1038" width="540" height="72" rx="15" fill="#fffaf6" stroke="#e65f00" stroke-width="2.4"/>
+<circle cx="1608" cy="1074.0" r="32" fill="#ffffff" stroke="#e65f00" stroke-width="4"/>
+<text x="1608" y="1080.0" class="badge" text-anchor="middle" style=" fill:#e65f00;">RTP</text>
+<text x="1655" y="1071" class="module-title" text-anchor="start" style=" fill:#e65f00; font-weight:800;">RTP media</text>
+<text x="1655" y="1094" class="text-small" text-anchor="start">16384–32768/udp — audio + video streams</text>
+<rect x="1545" y="1128" width="565" height="28" rx="7" fill="#fff8f1" stroke="#e65f00" stroke-width="1.5"/>
+<text x="1560" y="1148" class="text-small" text-anchor="start" style=" fill:#e65f00;">Call recordings: /var/lib/freeswitch/recordings/YYYY/MM/DD/*.wav; read-only nginx on :8088</text>
+<text x="1560" y="1163" class="text-small" text-anchor="start" style=" fill:#e65f00;">(Basic auth).</text>
+<rect x="2190" y="185" width="440" height="900" rx="14" fill="white" stroke="#e65f00" stroke-width="2.5"/>
+<text x="2410" y="230" class="box-title-small" text-anchor="middle" style=" fill:#e65f00; font-weight:800;">External clients</text>
+<circle cx="2410" cy="305" r="46" fill="#ffffff" stroke="#e65f00" stroke-width="4"/>
+<text x="2410" y="311" class="badge" text-anchor="middle" style=" fill:#e65f00;">SIP</text>
+<text x="2410" y="380" class="box-title-small" text-anchor="middle" style=" fill:#e65f00; font-weight:800;">Windows SIP softphone</text>
+<text x="2310" y="420" class="text-small" text-anchor="middle">user 4100</text>
+<text x="2310" y="438" class="text-small" text-anchor="middle">SIP/UDP via E5</text>
+<text x="2310" y="456" class="text-small" text-anchor="middle">Registers and places calls</text>
+<line x1="2230" y1="505" x2="2590" y2="505" stroke="#f4a261" stroke-width="2"/>
+<circle cx="2410" cy="585" r="46" fill="#ffffff" stroke="#e65f00" stroke-width="4"/>
+<text x="2410" y="591" class="badge" text-anchor="middle" style=" fill:#e65f00;">WEB</text>
+<text x="2410" y="660" class="box-title-small" text-anchor="middle" style=" fill:#e65f00; font-weight:800;">Browser-Phone / WebRTC</text>
+<text x="2275" y="700" class="text-small" text-anchor="middle">WebRTC users 4201 / 4202 via WSS 7443 (E8);</text>
+<text x="2275" y="718" class="text-small" text-anchor="middle">page from :8443 (E9). Audio + video.</text>
+<line x1="2230" y1="790" x2="2590" y2="790" stroke="#f4a261" stroke-width="2"/>
+<circle cx="2310" cy="865" r="34" fill="#ffffff" stroke="#0b4eb3" stroke-width="4"/>
+<text x="2310" y="871" class="badge" text-anchor="middle" style=" fill:#0b4eb3;">OPS</text>
+<text x="2360" y="855" class="box-title-small" text-anchor="start" style=" fill:#0b3d91; font-weight:800;">Operator browser</text>
+<text x="2360" y="882" class="text-small" text-anchor="start">Supervisor wallboard (/wallboard)</text>
+<text x="2360" y="899" class="text-small" text-anchor="start">consumes SSE events (E12).</text>
+<circle cx="2310" cy="1000" r="34" fill="#ffffff" stroke="#e65f00" stroke-width="4"/>
+<text x="2310" y="1006" class="badge" text-anchor="middle" style=" fill:#e65f00;">IP</text>
+<text x="2360" y="990" class="box-title-small" text-anchor="start" style=" fill:#e65f00; font-weight:800;">Physical SIP phones</text>
+<text x="2360" y="1018" class="text-small" text-anchor="start">Boot provisioning via GET</text>
+<text x="2360" y="1035" class="text-small" text-anchor="start">/provision/&lt;mac&gt; (E13).</text>
+<rect x="735" y="135" width="420" height="88" rx="10" fill="#fbf7ff" stroke="#7b2cbf" stroke-width="2.2"/>
+<text x="751" y="159" class="label" text-anchor="start" style=" fill:#7b2cbf; font-weight:800;">E7  ODBC — TCP 5432</text>
+<text x="751" y="180" class="label-small" text-anchor="start" style=" fill:#7b2cbf;">unixODBC; runtime state in PostgreSQL</text>
+<text x="751" y="196" class="label-small" text-anchor="start" style=" fill:#7b2cbf;">core db, sofia, callcenter, fifo/db/voicemail</text>
+<text x="751" y="212" class="label-small" text-anchor="start" style=" fill:#7b2cbf;">no sqlite; SNAT to 192.168.48.1</text>
+<rect x="735" y="240" width="420" height="88" rx="10" fill="#fbf7ff" stroke="#7b2cbf" stroke-width="2.2" stroke-dasharray="8 6"/>
+<text x="751" y="264" class="label" text-anchor="start" style=" fill:#7b2cbf; font-weight:800;">E14  Voicemail read — TCP 5432</text>
+<text x="751" y="285" class="label-small" text-anchor="start" style=" fill:#7b2cbf;">Control Plane read-only pool to freeswitch_core</text>
+<text x="751" y="301" class="label-small" text-anchor="start" style=" fill:#7b2cbf;">backs GET /api/v1/voicemail/{domain}/{number}</text>
+<text x="751" y="317" class="label-small" text-anchor="start" style=" fill:#7b2cbf;">messages written only by FreeSWITCH (E7)</text>
+<rect x="735" y="345" width="420" height="88" rx="10" fill="#f8fff8" stroke="#138a21" stroke-width="2.2"/>
+<text x="751" y="369" class="label" text-anchor="start" style=" fill:#138a21; font-weight:800;">E3  HTTPS — TCP 8080 /xml/*</text>
+<text x="751" y="390" class="label-small" text-anchor="start" style=" fill:#138a21;">mTLS + HTTP Basic auth</text>
+<text x="751" y="406" class="label-small" text-anchor="start" style=" fill:#138a21;">Pull directory + dialplan (configuration binding</text>
+<text x="751" y="422" class="label-small" text-anchor="start" style=" fill:#138a21;">available, off by default)</text>
+<rect x="735" y="450" width="420" height="72" rx="10" fill="#f7fbff" stroke="#0b4eb3" stroke-width="2.2"/>
+<text x="751" y="474" class="label" text-anchor="start" style=" fill:#0b4eb3; font-weight:800;">E1  SQL / pgx — TCP 5432</text>
+<text x="751" y="495" class="label-small" text-anchor="start" style=" fill:#0b4eb3;">DB user/pass</text>
+<text x="751" y="511" class="label-small" text-anchor="start" style=" fill:#0b4eb3;">read/write desired state</text>
+<rect x="735" y="535" width="420" height="72" rx="10" fill="#f7fbff" stroke="#0b4eb3" stroke-width="2.2"/>
+<text x="751" y="559" class="label" text-anchor="start" style=" fill:#0b4eb3; font-weight:800;">E2  HTTPS — TCP 8080</text>
+<text x="751" y="580" class="label-small" text-anchor="start" style=" fill:#0b4eb3;">Bearer token over TLS</text>
+<text x="751" y="596" class="label-small" text-anchor="start" style=" fill:#0b4eb3;">Declarative CRUD + reloadxml</text>
+<rect x="735" y="620" width="420" height="88" rx="10" fill="#f7fbff" stroke="#0b4eb3" stroke-width="2.2"/>
+<text x="751" y="644" class="label" text-anchor="start" style=" fill:#0b4eb3; font-weight:800;">E4  ESL — TCP 8021</text>
+<text x="751" y="665" class="label-small" text-anchor="start" style=" fill:#0b4eb3;">ESL password + inbound ACL</text>
+<text x="751" y="681" class="label-small" text-anchor="start" style=" fill:#0b4eb3;">reloadxml, gateway status, registrations</text>
+<rect x="790" y="720" width="315" height="56" rx="9" fill="#ffffff" stroke="#0b4eb3" stroke-width="1.8" stroke-dasharray="8 6"/>
+<text x="815" y="743" class="label-small" text-anchor="start" style=" fill:#0b4eb3;">Source-NATed by router to 192.168.48.1</text>
+<rect x="790" y="785" width="315" height="56" rx="9" fill="#ffffff" stroke="#0b4eb3" stroke-width="1.8" stroke-dasharray="8 6"/>
+<text x="815" y="808" class="label-small" text-anchor="start" style=" fill:#0b4eb3;">FreeSWITCH ESL ACL allows 192.168.48.1</text>
+<rect x="735" y="860" width="420" height="88" rx="10" fill="#f8fff8" stroke="#138a21" stroke-width="2.2"/>
+<text x="751" y="884" class="label" text-anchor="start" style=" fill:#138a21; font-weight:800;">E11  CDR ingest — TCP 8080</text>
+<text x="751" y="905" class="label-small" text-anchor="start" style=" fill:#138a21;">mod_json_cdr POSTs JSON to POST /cdr</text>
+<text x="751" y="921" class="label-small" text-anchor="start" style=" fill:#138a21;">same mTLS + Basic auth as /xml/*</text>
+<text x="751" y="937" class="label-small" text-anchor="start" style=" fill:#138a21;">read via /api/v1/cdr and /cdr/stats</text>
+<rect x="735" y="965" width="420" height="88" rx="10" fill="#f7fbff" stroke="#0b4eb3" stroke-width="2.2"/>
+<text x="751" y="989" class="label" text-anchor="start" style=" fill:#0b4eb3; font-weight:800;">E10  HTTPS/HTTP — TCP 8088</text>
+<text x="751" y="1010" class="label-small" text-anchor="start" style=" fill:#0b4eb3;">Control Plane proxies recording list + download</text>
+<text x="751" y="1026" class="label-small" text-anchor="start" style=" fill:#0b4eb3;">GET /api/v1/recordings; Basic auth</text>
+<rect x="735" y="1070" width="420" height="72" rx="10" fill="#f7fbff" stroke="#0b4eb3" stroke-width="2.2"/>
+<text x="751" y="1094" class="label" text-anchor="start" style=" fill:#0b4eb3; font-weight:800;">E9  HTTPS — TCP 8443</text>
+<text x="751" y="1115" class="label-small" text-anchor="start" style=" fill:#0b4eb3;">Loads self-hosted Browser-Phone UI</text>
+<rect x="2175" y="90" width="380" height="90" rx="10" fill="#fff8f1" stroke="#e65f00" stroke-width="2.2"/>
+<text x="2191" y="114" class="label" text-anchor="start" style=" fill:#e65f00; font-weight:800;">E5  SIP — UDP 5060</text>
+<text x="2191" y="135" class="label-small" text-anchor="start" style=" fill:#e65f00;">(+ RTP 16384–32768)</text>
+<text x="2191" y="151" class="label-small" text-anchor="start" style=" fill:#e65f00;">SIP digest (a1-hash)</text>
+<text x="2191" y="167" class="label-small" text-anchor="start" style=" fill:#e65f00;">Register + make calls</text>
+<rect x="2135" y="1085" width="455" height="86" rx="10" fill="#fff8f1" stroke="#e65f00" stroke-width="2.2"/>
+<text x="2151" y="1109" class="label" text-anchor="start" style=" fill:#e65f00; font-weight:800;">E6  RTP / audio+video — UDP</text>
+<text x="2151" y="1130" class="label-small" text-anchor="start" style=" fill:#e65f00;">Media: IVR prompts, TTS, WebRTC</text>
+<text x="2151" y="1146" class="label-small" text-anchor="start" style=" fill:#e65f00;">Opus/VP8 over RTP</text>
+<rect x="2645" y="520" width="320" height="112" rx="10" fill="#fff8f1" stroke="#e65f00" stroke-width="2.2"/>
+<text x="2661" y="544" class="label" text-anchor="start" style=" fill:#e65f00; font-weight:800;">E8  WSS — TCP 7443</text>
+<text x="2661" y="565" class="label-small" text-anchor="start" style=" fill:#e65f00;">SIP over secure WebSocket</text>
+<text x="2661" y="581" class="label-small" text-anchor="start" style=" fill:#e65f00;">WebRTC signalling; media over E6</text>
+<text x="2661" y="597" class="label-small" text-anchor="start" style=" fill:#e65f00;">TLS: our CA-signed cert</text>
+<rect x="2645" y="655" width="320" height="126" rx="10" fill="#f7fbff" stroke="#0b4eb3" stroke-width="2.2"/>
+<text x="2661" y="679" class="label" text-anchor="start" style=" fill:#0b4eb3; font-weight:800;">E12  Live events (SSE) — TCP 8080</text>
+<text x="2661" y="700" class="label-small" text-anchor="start" style=" fill:#0b4eb3;">Control Plane ESL listener → hub</text>
+<text x="2661" y="716" class="label-small" text-anchor="start" style=" fill:#0b4eb3;">GET /api/v1/events; wallboard SPA</text>
+<text x="2661" y="732" class="label-small" text-anchor="start" style=" fill:#0b4eb3;">/wallboard; Bearer token over TLS</text>
+<rect x="2645" y="810" width="320" height="136" rx="10" fill="#fff8f1" stroke="#e65f00" stroke-width="2.2"/>
+<text x="2661" y="834" class="label" text-anchor="start" style=" fill:#e65f00; font-weight:800;">E13  Phone provisioning — TCP 8080</text>
+<text x="2661" y="855" class="label-small" text-anchor="start" style=" fill:#e65f00;">Physical SIP phones fetch</text>
+<text x="2661" y="871" class="label-small" text-anchor="start" style=" fill:#e65f00;">GET /provision/&lt;mac&gt;</text>
+<text x="2661" y="887" class="label-small" text-anchor="start" style=" fill:#e65f00;">Basic auth + CIDR allowlist</text>
+<text x="2661" y="903" class="label-small" text-anchor="start" style=" fill:#e65f00;">renders Yealink / Grandstream / generic</text>
+<text x="2661" y="919" class="label-small" text-anchor="start" style=" fill:#e65f00;">config</text>
+<rect x="50" y="1245" width="440" height="650" rx="12" fill="white" stroke="#1f2937" stroke-width="2"/>
+<text x="270" y="1283" class="box-title-small" text-anchor="middle" style=" font-weight:800;">Legend</text>
+<line x1="90" y1="1340" x2="185" y2="1340" stroke="#0b4eb3" stroke-width="5"/>
+<text x="220" y="1345" class="text-small" text-anchor="start" style=" fill:#0b4eb3;">Control / management plane</text>
+<line x1="90" y1="1388" x2="185" y2="1388" stroke="#138a21" stroke-width="5" stroke-dasharray="12 8"/>
+<text x="220" y="1393" class="text-small" text-anchor="start" style=" fill:#138a21;">Config delivery / XML pull</text>
+<line x1="90" y1="1436" x2="185" y2="1436" stroke="#e65f00" stroke-width="5"/>
+<text x="220" y="1441" class="text-small" text-anchor="start" style=" fill:#e65f00;">SIP / RTP / WebRTC media</text>
+<line x1="90" y1="1484" x2="185" y2="1484" stroke="#7b2cbf" stroke-width="5"/>
+<text x="220" y="1489" class="text-small" text-anchor="start" style=" fill:#7b2cbf;">Database / ODBC plane</text>
+<line x1="90" y1="1532" x2="170" y2="1532" stroke="#1d2433" stroke-width="4" marker-end="url(#arrow-black)"/>
+<text x="220" y="1537" class="text-small" text-anchor="start">Push / server → server/client</text>
+<line x1="90" y1="1580" x2="170" y2="1580" stroke="#1d2433" stroke-width="4" stroke-dasharray="10 8" marker-end="url(#arrow-black)"/>
+<text x="220" y="1585" class="text-small" text-anchor="start">Pull / on-demand fetch</text>
+<text x="90" y="1633" class="text-small" text-anchor="start">▣</text>
+<text x="220" y="1633" class="text-small" text-anchor="start">Authenticated / authorization required</text>
+<text x="90" y="1693" class="text-small" text-anchor="start" style=" font-weight:800;">Edge IDs: E1–E14</text>
+<rect x="520" y="1245" width="780" height="650" rx="12" fill="#ffffff" stroke="#0b4eb3" stroke-width="2"/>
+<text x="585" y="1283" class="box-title-small" text-anchor="start" style=" fill:#0b4eb3;">◈</text>
+<text x="630" y="1283" class="box-title-small" text-anchor="start" style=" fill:#0b3d91; font-weight:800;">Security layers</text>
+<text x="545" y="1317" class="text-tiny" text-anchor="start">• E2 /api/v1/*: TLS + static Bearer token (dev-token).</text>
+<text x="545" y="1333" class="text-tiny" text-anchor="start">• E3 /xml/*: TLS + mutual TLS + HTTP Basic auth; directory returns a1-hash, never plaintext SIP password.</text>
+<text x="545" y="1349" class="text-tiny" text-anchor="start">• E4 ESL: non-default password + apply-inbound-acl (loopback + 192.168.48.1).</text>
+<text x="545" y="1365" class="text-tiny" text-anchor="start">• E5 SIP: digest auth; FreeSWITCH validates against a1-hash from E3.</text>
+<text x="545" y="1381" class="text-tiny" text-anchor="start">• TLS material: self-signed CA; server cert for Control Plane SAN includes 172.31.30.216 / 127.0.0.1 /</text>
+<text x="545" y="1396" class="text-tiny" text-anchor="start">  localhost; client cert for FreeSWITCH; audit logs redact passwords.</text>
+<text x="545" y="1412" class="text-tiny" text-anchor="start">• E7 ODBC: PostgreSQL user/password; FreeSWITCH runtime DBs (no sqlite).</text>
+<text x="545" y="1428" class="text-tiny" text-anchor="start">• E8 WSS: TLS (our CA) on 7443 for WebRTC.</text>
+<text x="545" y="1444" class="text-tiny" text-anchor="start">• E11 CDR: POST /cdr is FreeSWITCH-facing → same mTLS + Basic auth as /xml/*.</text>
+<text x="545" y="1460" class="text-tiny" text-anchor="start">• E12 events: SSE requires Bearer token; wallboard passes it via fetch.</text>
+<text x="545" y="1476" class="text-tiny" text-anchor="start">• E13 provisioning: Basic auth + CIDR allowlist; configs carry cleartext SIP password by nature.</text>
+<text x="545" y="1492" class="text-tiny" text-anchor="start">• Grafana: read-only grafana_ro DB role; writes denied on all 3 DBs.</text>
+<text x="545" y="1508" class="text-tiny" text-anchor="start">• Voicemail: voicemail.password is redacted in audit log and never appears in directory XML; only vm-</text>
+<text x="545" y="1523" class="text-tiny" text-anchor="start">  password PIN.</text>
+<rect x="1330" y="1245" width="950" height="650" rx="12" fill="#ffffff" stroke="#7b2cbf" stroke-width="2"/>
+<text x="1395" y="1283" class="box-title-small" text-anchor="start" style=" fill:#7b2cbf;">⚙</text>
+<text x="1440" y="1283" class="box-title-small" text-anchor="start" style=" fill:#4c1d95; font-weight:800;">Runtime data flows</text>
+<text x="1360" y="1317" class="text-tiny" text-anchor="start">1. Declarative config change: Operator → Terraform → Control Plane → PostgreSQL; Terraform → POST /runtime/reloadxml → Control</text>
+<text x="1360" y="1331" class="text-tiny" text-anchor="start">Plane → ESL → FreeSWITCH.</text>
+<text x="1360" y="1350" class="text-tiny" text-anchor="start">2. SIP registration: Softphone/WebRTC → FreeSWITCH; FreeSWITCH → /xml/directory → Control Plane → PostgreSQL; a1-hash returned and</text>
+<text x="1360" y="1364" class="text-tiny" text-anchor="start">verified.</text>
+<text x="1360" y="1383" class="text-tiny" text-anchor="start">3. Call into an IVR: dial 3333 → FreeSWITCH; /xml/dialplan(context=company) → Control Plane → PostgreSQL; answer → Piper TTS /</text>
+<text x="1360" y="1397" class="text-tiny" text-anchor="start">fallback flite → play_and_get_digits → transfer → RTP.</text>
+<text x="1360" y="1416" class="text-tiny" text-anchor="start">4. Call center: dial 4444 → mod_callcenter(support@…) → MOH → Available agent rings; runtime + record-template recording; all</text>
+<text x="1360" y="1430" class="text-tiny" text-anchor="start">state in PostgreSQL.</text>
+<text x="1360" y="1449" class="text-tiny" text-anchor="start">5. Conference: dial 3500 or 3501 + PIN → mod_conference video grid; profiles from configuration binding.</text>
+<text x="1360" y="1468" class="text-tiny" text-anchor="start">6. CDR: call ends → mod_json_cdr POSTs JSON → Control Plane /cdr → parsed → stored in PostgreSQL → queried via GET /api/v1/cdr and</text>
+<text x="1360" y="1482" class="text-tiny" text-anchor="start">/cdr/stats.</text>
+<text x="1360" y="1501" class="text-tiny" text-anchor="start">7. Live events: FreeSWITCH events → ESL listener (Control Plane) → in-process hub → GET /api/v1/events (SSE) → supervisor</text>
+<text x="1360" y="1515" class="text-tiny" text-anchor="start">wallboard tiles (/wallboard).</text>
+<text x="1360" y="1534" class="text-tiny" text-anchor="start">8. Phone provisioning: phone boots → GET /provision/&lt;mac&gt; → Control Plane looks up provisioned_devices → renders vendor config</text>
+<text x="1360" y="1548" class="text-tiny" text-anchor="start">with SIP password pulled from directory user.</text>
+<text x="1360" y="1567" class="text-tiny" text-anchor="start">9. Voicemail: caller leaves a message → mod_voicemail stores it in freeswitch_core (ODBC); vm-* comes from directory; read API</text>
+<text x="1360" y="1581" class="text-tiny" text-anchor="start">returns list + unread (MWI) via read-only core pool.</text>
+<rect x="2310" y="1245" width="640" height="650" rx="12" fill="#fffdf7" stroke="#b7791f" stroke-width="2"/>
+<text x="2370" y="1283" class="box-title-small" text-anchor="start" style=" fill:#1f2937;">▯</text>
+<text x="2420" y="1283" class="box-title-small" text-anchor="start" style=" fill:#1f2937; font-weight:800;">Deployed now</text>
+<text x="2335" y="1317" class="text-tiny" text-anchor="start">• domain: 192.168.48.143</text>
+<text x="2335" y="1335" class="text-tiny" text-anchor="start">• SIP users: 2001, 2002, 4100 (softphone), 4201 / 4202 (WebRTC)</text>
+<text x="2335" y="1353" class="text-tiny" text-anchor="start">• IVRs: 5000, 7000/7100, 8000/8100, 3333 Universal, Piper TTS</text>
+<text x="2335" y="1371" class="text-tiny" text-anchor="start">• Call center: queue support@192.168.48.143, entry 4444, agents 4201/4202</text>
+<text x="2335" y="1389" class="text-tiny" text-anchor="start">• Conferences: 3500 (standup), 3501 (private, PIN)</text>
+<text x="2335" y="1407" class="text-tiny" text-anchor="start">• API surface: audit log, list pagination, CDR (/api/v1/cdr + /cdr/stats), live</text>
+<text x="2335" y="1422" class="text-tiny" text-anchor="start">  events (SSE) + supervisor wallboard (/wallboard), phone provisioning</text>
+<text x="2335" y="1437" class="text-tiny" text-anchor="start">  (/provision/&lt;mac&gt;, provisioned_devices), voicemail read API (/api/v1/voicemail).</text>
+<text x="2335" y="1455" class="text-tiny" text-anchor="start">• Observability: Grafana NOC dashboard on :3000 (read-only grafana_ro).</text>
+<text x="2335" y="1473" class="text-tiny" text-anchor="start">• Provider: registry.terraform.io/jamalshahverdiev/freeswitch v0.1.1;</text>
+<text x="2335" y="1488" class="text-tiny" text-anchor="start">  freeswitch_device resource; voicemail = {} block on freeswitch_user;</text>
+<text x="2335" y="1503" class="text-tiny" text-anchor="start">  freeswitch_device / freeswitch_voicemail data sources.</text>
+<text x="2335" y="1521" class="text-tiny" text-anchor="start">• test SIP user: 4100 @ 192.168.48.143 (password: see deploy/SECRETS.md)</text>
+<text x="60" y="1970" class="text-small" text-anchor="start" style=" fill:#333;">Notes: All services run in Docker on Zone A (postgres + control-plane + webphone + grafana). Control Plane publishes :8080, webphone :8443, Grafana :3000; Postgres :5432 for local use. FreeSWITCH on Zone B keeps NO</text>
+<text x="60" y="1986" class="text-small" text-anchor="start" style=" fill:#333;">sqlite — its core db, sofia registrations, mod_callcenter and fifo/db/voicemail all live in PostgreSQL via ODBC (E7), so the FS host depends on the dev-box Postgres being reachable at boot.</text>
+</svg>

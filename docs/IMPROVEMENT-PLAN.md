@@ -196,18 +196,31 @@ Verified: grafana_ro reads all 3 DBs / write denied; Grafana :3000 up, 3 datasou
 
 ## Phase 6 — New "wow" features (pick by appetite)
 
-- [ ] **WebSocket / SSE live events** — foundation for wallboard + bots.
-      1. Add a PERSISTENT ESL listener to the control-plane (current ESL client
-         is connect-per-command; add a long-lived goroutine that connects, sends
-         `event plain CHANNEL_CREATE CHANNEL_ANSWER CHANNEL_HANGUP_COMPLETE
-         CUSTOM callcenter::info conference::maintenance`, reconnects on drop).
-      2. Internal pub/sub hub (fan-out to subscribers); parse the events we care
-         about into small JSON (call started/ended, agent status, queue join/leave,
-         conference join/leave).
-      3. Expose `GET /api/v1/events` as SSE (simpler than WS for one-way) behind
-         the bearer token; heartbeat + last-event-id optional.
-      4. Tests: feed canned ESL event frames into the parser (unit); a manual
-         curl stream check against the live box.
+- [x] **SSE live events** — DONE 2026-06-14 (branch `events`). Live-verified:
+      a real call streamed call.started/answered/ended over SSE. Caught & fixed a
+      real bug: the logging middleware's statusWriter didn't forward Flush() so
+      SSE would never flush in prod. internal/events Hub+Listener, GET
+      /api/v1/events, main wiring, unit+race+httptest. Decision below kept:
+      Decision: SSE, not WebSocket — we only need server->client push; SSE is
+      plain HTTP, proxy-friendly, browser EventSource auto-reconnects. Plan:
+      1. internal/events: `Hub` (pub/sub broadcast; Subscribe()->chan+cancel;
+         Publish() non-blocking, drops to a slow subscriber so one stuck client
+         can't stall the hub) + `Event{Type,Time,Data map[string]string}`.
+      2. internal/events `Listener`: persistent ESL goroutine — connect+auth
+         (reuse runtime.readHeaders framing), send `event plain CHANNEL_CREATE
+         CHANNEL_ANSWER CHANNEL_HANGUP_COMPLETE CUSTOM callcenter::info
+         conference::maintenance`, read text/event-plain frames, URL-decode the
+         body's Name:value lines, normalize to events (call.started/answered/
+         ended, agent.status, queue.member, conference), Publish to Hub.
+         Reconnect with backoff; runs only if ESL is enabled.
+      3. api: `GET /api/v1/events` SSE under bearer token — Subscribe, write
+         `data: <json>\n\n` per event, ~25s heartbeat comment, unsubscribe on
+         r.Context().Done().
+      4. main.go: start Listener if ESL enabled; pass Hub to Server.
+      5. Tests: parser (canned event-plain frames -> normalized JSON), Hub
+         fan-out + slow-consumer drop, SSE handler via httptest (subscribe,
+         inject event, read one frame). + manual curl stream vs live box.
+      6. docs/api.md events section; note it's the base for wallboard/voicemail.
 - [ ] **Supervisor wallboard** — a small static page (like webphone) or a
       control-plane HTML route that consumes `/api/v1/events` (Phase 6 #1) and
       shows queue depth, agent states, current calls, wait times in real time.

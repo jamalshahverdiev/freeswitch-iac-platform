@@ -5,6 +5,7 @@ package api
 // reach PostgreSQL are covered by deploy/api-test.sh against the live stack.
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/audit"
+	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/events"
 	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/runtime"
 )
 
@@ -151,6 +153,56 @@ func TestCDRListBadPagination(t *testing.T) {
 	rec := do(t, h, http.MethodGet, "/api/v1/cdr?limit=bad", "test-token", "")
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("got %d want 400", rec.Code)
+	}
+}
+
+func TestEventsSSE(t *testing.T) {
+	hub := events.NewHub()
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	srv := NewServer(nil, audit.New(nil), runtime.New("", "", time.Second),
+		Options{Token: "test-token", Hub: hub}, log).Router()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/events", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	ctx, cancel := context.WithCancel(req.Context())
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	done := make(chan struct{})
+	go func() { srv.ServeHTTP(rec, req); close(done) }()
+
+	// give the handler a moment to subscribe, then publish an event
+	deadline := time.Now().Add(2 * time.Second)
+	for hub.Subscribers() == 0 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if hub.Subscribers() != 1 {
+		cancel()
+		t.Fatalf("handler did not subscribe (subs=%d)", hub.Subscribers())
+	}
+	hub.Publish(events.Event{Type: "call.started", Data: map[string]string{"uuid": "u1"}})
+	time.Sleep(50 * time.Millisecond)
+	cancel() // disconnect
+	<-done
+
+	body := rec.Body.String()
+	if !strings.Contains(body, "text/event-stream") && rec.Header().Get("Content-Type") != "text/event-stream" {
+		t.Errorf("missing SSE content-type: %q", rec.Header().Get("Content-Type"))
+	}
+	if !strings.Contains(body, "event: call.started") || !strings.Contains(body, `"uuid":"u1"`) {
+		t.Errorf("event not streamed; body:\n%s", body)
+	}
+	// handler must unsubscribe on disconnect
+	if hub.Subscribers() != 0 {
+		t.Errorf("leaked subscriber after disconnect: %d", hub.Subscribers())
+	}
+}
+
+func TestEventsDisabledWithoutHub(t *testing.T) {
+	h := testServer(t, Options{}) // no Hub
+	rec := do(t, h, http.MethodGet, "/api/v1/events", "test-token", "")
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("got %d want 503 when hub is nil", rec.Code)
 	}
 }
 

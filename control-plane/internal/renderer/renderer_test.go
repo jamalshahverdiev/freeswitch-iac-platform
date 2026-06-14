@@ -101,6 +101,24 @@ func TestRenderDirectoryNoVoicemail(t *testing.T) {
 	wantNotContains(t, out, "vm-enabled", "vm-mailto", "vm-attach-file")
 }
 
+func TestRenderVoicemail(t *testing.T) {
+	out := must(t)(RenderVoicemail("freeswitch-core:fs:pw"))
+	wantContains(t, out,
+		`<configuration name="voicemail.conf"`,
+		`<profile name="default">`,
+		`<param name="odbc-dsn" value="freeswitch-core:fs:pw">`,
+		`<param name="file-extension" value="wav">`,
+		`<email>`,
+		`<param name="email-from" value="${voicemail_account}@${voicemail_domain}">`,
+	)
+}
+
+func TestRenderVoicemailNoDSN(t *testing.T) {
+	out := must(t)(RenderVoicemail(""))
+	// empty DSN omits the param entirely (no odbc-dsn line)
+	wantNotContains(t, out, "odbc-dsn")
+}
+
 // ---------- dialplan ----------
 
 func dpExt(name, context string, prio int, enabled bool) models.DialplanExtension {

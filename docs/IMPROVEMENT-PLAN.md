@@ -268,8 +268,11 @@ Verified: grafana_ro reads all 3 DBs / write denied; Grafana :3000 up, 3 datasou
         user resource + data source. Verified: api-test 134, renderer/handler
         unit tests, provider acceptance (create+import+update+datasource), live
         directory render shows vm-enabled/vm-mailto.
-  - [ ] **#2 voicemail.conf via xml_curl** — render the VM profile through
-        `/xml/configuration` instead of the static host file (odbc-dsn from cfg).
+  - [x] **#2 voicemail.conf via xml_curl** — control-plane renders a `default`
+        profile through `/xml/configuration` (key_value=voicemail.conf), odbc-dsn
+        from `VM_ODBC_DSN` (→ freeswitch_core). Parity with callcenter/conference:
+        the configuration binding stays off on the live FS by choice, on-disk
+        remains authoritative. Verified: renderer tests + api-test 136.
   - [ ] **#3 Read API** — `GET /api/v1/voicemail/{domain}/{number}` + unread
         (MWI) count from a read-only `freeswitch_core` pool; data source.
   - [ ] **#4 (separate branch) Notifications** — ESL `MESSAGE_WAITING` → webhook

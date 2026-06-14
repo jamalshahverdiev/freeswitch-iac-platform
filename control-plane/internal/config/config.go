@@ -30,6 +30,9 @@ type Config struct {
 	// CCOdbcDSN ("dsn:user:pass") is emitted into the rendered callcenter.conf
 	// so mod_callcenter keeps its runtime tables in PostgreSQL, not sqlite.
 	CCOdbcDSN string
+	// VMOdbcDSN ("dsn:user:pass") is emitted into the rendered voicemail.conf so
+	// mod_voicemail stores messages in PostgreSQL (freeswitch_core).
+	VMOdbcDSN string
 	// Recordings file server on the FS host (nginx) proxied by /api/v1/recordings.
 	RecURL      string
 	RecUser     string
@@ -58,6 +61,7 @@ func Load() (Config, error) {
 		TLSKeyFile:      env("TLS_KEY_FILE", ""),
 		XMLClientCAFile: env("XML_CLIENT_CA_FILE", ""),
 		CCOdbcDSN:       env("CC_ODBC_DSN", ""),
+		VMOdbcDSN:       env("VM_ODBC_DSN", "freeswitch-core:freeswitch:freeswitch"),
 		RecURL:          env("REC_URL", ""),
 		RecUser:         env("REC_USER", "recordings"),
 		RecPassword:     env("REC_PASSWORD", ""),

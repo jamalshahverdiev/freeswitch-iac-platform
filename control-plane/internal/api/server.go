@@ -25,6 +25,7 @@ type Server struct {
 	xmlAllow     []*net.IPNet
 	xmlClientTLS bool
 	ccOdbcDSN    string
+	vmOdbcDSN    string
 	recURL       string
 	recUser      string
 	recPass      string
@@ -46,6 +47,8 @@ type Options struct {
 	XMLRequireClientCert bool
 	// CCOdbcDSN ("dsn:user:pass") is emitted into rendered callcenter.conf.
 	CCOdbcDSN string
+	// VMOdbcDSN ("dsn:user:pass") is emitted into rendered voicemail.conf.
+	VMOdbcDSN string
 	// RecURL/RecUser/RecPassword: the recordings file server on the FS host
 	// (nginx, autoindex json) that /api/v1/recordings proxies to.
 	RecURL      string
@@ -72,6 +75,7 @@ func NewServer(st *store.Store, au *audit.Recorder, esl *runtime.Client, opts Op
 		xmlPass:      opts.XMLPassword,
 		xmlClientTLS: opts.XMLRequireClientCert,
 		ccOdbcDSN:    opts.CCOdbcDSN,
+		vmOdbcDSN:    opts.VMOdbcDSN,
 		recURL:        opts.RecURL,
 		recUser:       opts.RecUser,
 		recPass:       opts.RecPassword,

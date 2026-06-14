@@ -55,6 +55,9 @@ services:
       # mod_callcenter runtime tables go to PostgreSQL via this ODBC DSN
       # (matches the [freeswitch] DSN configured on the FS server).
       CC_ODBC_DSN: ${CC_ODBC_DSN:-freeswitch:freeswitch:freeswitch}
+      # mod_voicemail message store DSN, emitted into the rendered voicemail.conf
+      # (matches the [freeswitch-core] DSN configured on the FS server).
+      VM_ODBC_DSN: ${VM_ODBC_DSN:-freeswitch-core:freeswitch:freeswitch}
       # Recordings file server on the FS host (nginx :8088, basic auth) that
       # GET /api/v1/recordings proxies (list + download).
       REC_URL: ${REC_URL:-http://192.168.48.143:8088}

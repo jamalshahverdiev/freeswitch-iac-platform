@@ -68,6 +68,7 @@ func main() {
 		XMLAllowCIDRs:        cfg.XMLAllowCIDRs,
 		XMLRequireClientCert: mtls,
 		CCOdbcDSN:            cfg.CCOdbcDSN,
+		VMOdbcDSN:            cfg.VMOdbcDSN,
 		RecURL:               cfg.RecURL,
 		RecUser:              cfg.RecUser,
 		RecPassword:          cfg.RecPassword,

@@ -452,7 +452,7 @@ and users without a password return **404**.
 |---|---|---|
 | `/xml/directory` | the requested user if managed | `<result status="not found"/>` → FreeSWITCH static files |
 | `/xml/dialplan` | the requested context if managed | not found → static files |
-| `/xml/configuration` | `callcenter.conf` (queues/agents/tiers + `odbc-dsn`) when `key_value=callcenter.conf` | any other config → not found → static files |
+| `/xml/configuration` | `callcenter.conf`, `conference.conf`, `voicemail.conf` (the latter a `default` profile with `odbc-dsn` → freeswitch_core) by `key_value` | any other config → not found → static files |
 
 **Authentication (required).** These endpoints expose SIP passwords and trunk
 secrets, so they are protected:

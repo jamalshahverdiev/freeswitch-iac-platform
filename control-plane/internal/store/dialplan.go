@@ -47,10 +47,14 @@ func (s *Store) CreateDialplanExtension(ctx context.Context, e *models.DialplanE
 func insertConditions(ctx context.Context, tx pgx.Tx, extID string, conditions []models.DialplanCondition) error {
 	for ci, c := range conditions {
 		condID := uuid.NewString()
+		timeAttrs := c.TimeAttrs
+		if timeAttrs == nil {
+			timeAttrs = map[string]string{}
+		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO dialplan_conditions (id, extension_id, field, expression, order_index)
-			VALUES ($1, $2, $3, $4, $5)`,
-			condID, extID, c.Field, c.Expression, ci); err != nil {
+			INSERT INTO dialplan_conditions (id, extension_id, field, expression, time_attrs, order_index)
+			VALUES ($1, $2, $3, $4, $5, $6)`,
+			condID, extID, c.Field, c.Expression, timeAttrs, ci); err != nil {
 			return err
 		}
 		for ai, a := range c.Actions {
@@ -67,7 +71,7 @@ func insertConditions(ctx context.Context, tx pgx.Tx, extID string, conditions [
 
 func (s *Store) loadConditions(ctx context.Context, extID string) ([]models.DialplanCondition, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT id, field, expression FROM dialplan_conditions
+		SELECT id, field, expression, time_attrs FROM dialplan_conditions
 		WHERE extension_id = $1 ORDER BY order_index`, extID)
 	if err != nil {
 		return nil, err
@@ -79,9 +83,12 @@ func (s *Store) loadConditions(ctx context.Context, extID string) ([]models.Dial
 	var conds []condRow
 	for rows.Next() {
 		var cr condRow
-		if err := rows.Scan(&cr.id, &cr.cond.Field, &cr.cond.Expression); err != nil {
+		if err := rows.Scan(&cr.id, &cr.cond.Field, &cr.cond.Expression, &cr.cond.TimeAttrs); err != nil {
 			rows.Close()
 			return nil, err
+		}
+		if len(cr.cond.TimeAttrs) == 0 {
+			cr.cond.TimeAttrs = nil // omit empty in JSON
 		}
 		conds = append(conds, cr)
 	}

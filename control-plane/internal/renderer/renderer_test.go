@@ -104,6 +104,34 @@ func TestRenderDialplan(t *testing.T) {
 	})
 }
 
+func TestRenderDialplanTimeAttrs(t *testing.T) {
+	exts := []models.DialplanExtension{
+		{ // regex + time window (business hours)
+			Name: "hours", Context: "company", Priority: 10, Enabled: true,
+			Conditions: []models.DialplanCondition{{
+				Field: "destination_number", Expression: "^(4444)$",
+				TimeAttrs: map[string]string{"wday": "2-6", "hour": "9-17"},
+				Actions:   []models.DialplanAction{{Application: "transfer", Data: "support@d"}},
+			}},
+		},
+		{ // pure time gate, no field/expression
+			Name: "night", Context: "company", Priority: 11, Enabled: true,
+			Conditions: []models.DialplanCondition{{
+				TimeAttrs: map[string]string{"time-of-day": "18:00-9:00"},
+				Actions:   []models.DialplanAction{{Application: "playback", Data: "closed.wav"}},
+			}},
+		},
+	}
+	out := must(t)(RenderDialplan(exts, "company"))
+	wantContains(t, out,
+		`wday="2-6"`, `hour="9-17"`,
+		`field="destination_number" expression="^(4444)$"`,
+		`time-of-day="18:00-9:00"`,
+	)
+	// pure time gate must NOT emit empty field/expression attributes
+	wantNotContains(t, out, `field=""`, `expression=""`)
+}
+
 // ---------- callcenter ----------
 
 func TestRenderCallcenter(t *testing.T) {

@@ -119,6 +119,14 @@ req GET  "/api/v1/dialplan/extensions?context=demo"; check "list extensions -> 2
 req PUT  "/api/v1/dialplan/extensions/$EXTID" '{"name":"ivr-test","domain":"demo.test","context":"demo","priority":20,"conditions":[{"field":"destination_number","expression":"^(7000)$","actions":[{"application":"answer"},{"application":"echo"}]}]}'
 check "update extension -> 200" 200 "$CODE"; contains "ext updated to echo" 'echo'
 
+echo "== dialplan time-based routing =="
+req POST /api/v1/dialplan/extensions '{"name":"tr-test","domain":"demo.test","context":"demo","priority":15,"conditions":[{"field":"destination_number","expression":"^(7001)$","time":{"wday":"2-6","hour":"9-17"},"actions":[{"application":"answer"}]}]}'
+check "create time-routed extension -> 201" 201 "$CODE"; TRID=$(idof); contains "ext echoes time attrs" '"wday":"2-6"'
+req POST /api/v1/dialplan/extensions '{"name":"tr-night","domain":"demo.test","context":"demo","priority":16,"conditions":[{"time":{"time-of-day":"17:00-9:00"},"actions":[{"application":"answer"}]}]}'
+check "create pure time-gate (no field) -> 201" 201 "$CODE"; TRNID=$(idof)
+req POST /api/v1/dialplan/extensions '{"name":"tr-bad","domain":"demo.test","context":"demo","conditions":[{"actions":[{"application":"answer"}]}]}'
+check "condition with neither regex nor time -> 400" 400 "$CODE"
+
 echo "== XML endpoints (mTLS + Basic auth + form-encoded, like mod_xml_curl) =="
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 [ -z "${XML_PASSWORD:-}" ] && [ -f "$ROOT/.env" ] && XML_PASSWORD="$(grep -E '^XML_PASSWORD=' "$ROOT/.env" | cut -d= -f2-)"
@@ -186,6 +194,8 @@ req GET  /api/v1/runtime/gateways/external/test-trunk; check "runtime gateway (n
 echo "== delete / cleanup =="
 req DELETE "/api/v1/dialplan/extensions/$EXTID";  check "delete extension -> 204" 204 "$CODE"
 req GET    "/api/v1/dialplan/extensions/$EXTID";  check "deleted extension -> 404" 404 "$CODE"
+req DELETE "/api/v1/dialplan/extensions/$TRID";   check "delete time ext -> 204" 204 "$CODE"
+req DELETE "/api/v1/dialplan/extensions/$TRNID";  check "delete time-gate ext -> 204" 204 "$CODE"
 req DELETE /api/v1/gateways/external/test-trunk;  check "delete gateway -> 204" 204 "$CODE"
 req DELETE /api/v1/conference/rooms/r-test;       check "delete conf room -> 204" 204 "$CODE"
 req DELETE /api/v1/conference/profiles/p-test;    check "delete conf profile -> 204" 204 "$CODE"

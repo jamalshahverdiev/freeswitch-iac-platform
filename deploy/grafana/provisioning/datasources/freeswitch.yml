@@ -1,0 +1,47 @@
+apiVersion: 1
+
+# Three read-only PostgreSQL datasources, one per database. Grafana reaches
+# postgres by its compose service name. Password is injected from the
+# GRAFANA_DB_PASSWORD env var (never stored in this file).
+datasources:
+  - name: FS Control
+    uid: fs_control
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    user: grafana_ro
+    jsonData:
+      database: freeswitch_control
+      sslmode: disable
+      postgresVersion: 1600
+    secureJsonData:
+      password: $GRAFANA_DB_PASSWORD
+    editable: false
+
+  - name: FS Callcenter
+    uid: fs_callcenter
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    user: grafana_ro
+    jsonData:
+      database: freeswitch_callcenter
+      sslmode: disable
+      postgresVersion: 1600
+    secureJsonData:
+      password: $GRAFANA_DB_PASSWORD
+    editable: false
+
+  - name: FS Core
+    uid: fs_core
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    user: grafana_ro
+    jsonData:
+      database: freeswitch_core
+      sslmode: disable
+      postgresVersion: 1600
+    secureJsonData:
+      password: $GRAFANA_DB_PASSWORD
+    editable: false

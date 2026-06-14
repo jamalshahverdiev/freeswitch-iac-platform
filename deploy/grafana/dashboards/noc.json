@@ -1,0 +1,89 @@
+{
+  "uid": "fs-noc",
+  "title": "FreeSWITCH NOC",
+  "tags": ["freeswitch"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Live calls",
+      "datasource": { "type": "postgres", "uid": "fs_core" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT count(*) AS \"calls\" FROM channels;" } ]
+    },
+    {
+      "id": 2, "type": "stat", "title": "Registered endpoints",
+      "datasource": { "type": "postgres", "uid": "fs_core" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT count(*) AS \"registered\" FROM sip_registrations;" } ]
+    },
+    {
+      "id": 3, "type": "stat", "title": "Waiting in queue",
+      "datasource": { "type": "postgres", "uid": "fs_callcenter" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 5 } ] } } },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT count(*) AS \"waiting\" FROM members WHERE state <> 'Answered';" } ]
+    },
+    {
+      "id": 4, "type": "stat", "title": "Available agents",
+      "datasource": { "type": "postgres", "uid": "fs_callcenter" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT count(*) AS \"available\" FROM agents WHERE status = 'Available' AND state = 'Waiting';" } ]
+    },
+
+    {
+      "id": 10, "type": "stat", "title": "Users",
+      "datasource": { "type": "postgres", "uid": "fs_control" },
+      "gridPos": { "h": 3, "w": 6, "x": 0, "y": 4 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "none" },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT count(*) AS \"users\" FROM users;" } ]
+    },
+    {
+      "id": 11, "type": "stat", "title": "Dialplan extensions",
+      "datasource": { "type": "postgres", "uid": "fs_control" },
+      "gridPos": { "h": 3, "w": 6, "x": 6, "y": 4 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "none" },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT count(*) AS \"extensions\" FROM dialplan_extensions;" } ]
+    },
+    {
+      "id": 12, "type": "stat", "title": "Call-center queues",
+      "datasource": { "type": "postgres", "uid": "fs_control" },
+      "gridPos": { "h": 3, "w": 6, "x": 12, "y": 4 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "none" },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT count(*) AS \"queues\" FROM cc_queues;" } ]
+    },
+    {
+      "id": 13, "type": "stat", "title": "Conference rooms",
+      "datasource": { "type": "postgres", "uid": "fs_control" },
+      "gridPos": { "h": 3, "w": 6, "x": 18, "y": 4 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "none" },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT count(*) AS \"rooms\" FROM conference_rooms;" } ]
+    },
+
+    {
+      "id": 20, "type": "table", "title": "Call-center agents",
+      "datasource": { "type": "postgres", "uid": "fs_callcenter" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 7 },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT name, status, state, calls_answered, no_answer_count, talk_time FROM agents ORDER BY name;" } ]
+    },
+    {
+      "id": 21, "type": "table", "title": "Queue members (live)",
+      "datasource": { "type": "postgres", "uid": "fs_callcenter" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT queue, cid_number, state, serving_agent FROM members ORDER BY joined_epoch;" } ]
+    },
+    {
+      "id": 22, "type": "table", "title": "Registrations",
+      "datasource": { "type": "postgres", "uid": "fs_core" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 15 },
+      "targets": [ { "refId": "A", "format": "table", "rawSql": "SELECT sip_user, sip_host, network_ip, network_port, user_agent, to_timestamp(expires) AS expires FROM sip_registrations ORDER BY sip_user;" } ]
+    }
+  ]
+}

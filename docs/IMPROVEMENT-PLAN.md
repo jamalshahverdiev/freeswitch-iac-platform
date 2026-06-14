@@ -122,29 +122,35 @@ freeswitch"). Revisit only if the lab turns into a real deployment.
       by (context, priority, name), so order is stable without this constraint.
 - [x] Secrets hygiene (DONE in Phase 0 git split): all creds in age-encrypted
       deploy/SECRETS.md.age; HANDOFF references it; literals scrubbed from code.
+- [ ] hack/secrets.sh: encrypt only files whose plaintext actually changed.
+      Right now `encrypt` re-writes every *.age, and age uses a random nonce, so
+      unchanged secrets still show as git-modified (noisy diffs, e.g. tls.tar.age
+      after the D1 work). Fix: before writing <f>.age, decrypt the existing one
+      and skip if the plaintext is byte-identical (compare hashes). Harmless as-is
+      (content is unchanged), purely a diff-hygiene improvement.
 - [ ] ESL hardening (optional): document the plaintext-password risk; ACL is
       the current mitigation; consider stunnel/wireguard if it ever leaves
       the lab.
 
 ## Phase 5 — Roadmap features (already agreed earlier)
 
-### D1 — Grafana NOC dashboard (NEXT; near-free after the no-sqlite milestone)
+### D1 — Grafana NOC dashboard — DONE 2026-06-13 (branch D1)
 
 All live state already sits in our PostgreSQL (freeswitch_core.channels /
 sip_registrations, freeswitch_callcenter.agents/members/tiers,
 freeswitch_control.*), so this is mostly wiring + dashboard JSON.
 
-1. [ ] Read-only DB role: add to `deploy/postgres-init/` a script creating a
+1. [x] Read-only DB role: add to `deploy/postgres-init/` a script creating a
        `grafana_ro` login with `CONNECT` + `USAGE` + `SELECT` on all three DBs
        (no write). Password via `.env` (age) `GRAFANA_DB_PASSWORD`.
-2. [ ] Compose: add a `grafana` service (grafana/grafana-oss), publish e.g.
+2. [x] Compose: add a `grafana` service (grafana/grafana-oss), publish e.g.
        `3000:3000`, `GF_SECURITY_ADMIN_PASSWORD` from `.env`, mount
        `deploy/grafana/provisioning/` and `deploy/grafana/dashboards/` read-only.
        Add GRAFANA_DB_PASSWORD/admin pass to `.env.example` + SECRETS.md.age.
-3. [ ] Provision datasources (`deploy/grafana/provisioning/datasources/*.yml`):
+3. [x] Provision datasources (`deploy/grafana/provisioning/datasources/*.yml`):
        three postgres datasources (control / callcenter / core) using grafana_ro,
        `sslmode=disable` (compose-internal network).
-4. [ ] Dashboard JSON (`deploy/grafana/dashboards/noc.json`), panels:
+4. [x] Dashboard JSON (`deploy/grafana/dashboards/noc.json`), panels:
        - Live calls: `SELECT count(*) FROM channels` (core) — stat + timeseries
        - Registered endpoints: `sip_registrations` (core) — table (sip_user, ip)
        - Queue waiting: `members WHERE state!='Answered'` (callcenter) — stat
@@ -152,11 +158,14 @@ freeswitch_control.*), so this is mostly wiring + dashboard JSON.
        - Desired-state counts: users, dialplan_extensions, cc_queues,
          conference_rooms (control) — stat row
        Refresh 5s.
-5. [ ] Doc: `docs/observability.md` + a panel screenshot; link from README.
+5. [x] Doc: `docs/observability.md` + a panel screenshot; link from README.
        Note: Grafana auto-refresh polls Postgres directly (read-only) — it does
        NOT go through the control-plane API.
-6. [ ] api-test/CI: nothing to assert in api-test (no API surface); just make
+6. [x] api-test/CI: nothing to assert in api-test (no API surface); just make
        sure `docker compose config` still validates with the new service.
+
+
+Verified: grafana_ro reads all 3 DBs / write denied; Grafana :3000 up, 3 datasources provisioned, dashboard fs-noc loaded, live query through Grafana returned agents=2 (status 200). Docs: docs/observability.md. NOTE step 5 screenshot still TODO (user to add).
 
 - [ ] **C1 CDR via mod_json_cdr** → control-plane `/cdr` (mTLS+Basic like
       /xml) → cdr table + `GET /api/v1/cdr` + stats; Grafana panels on top.

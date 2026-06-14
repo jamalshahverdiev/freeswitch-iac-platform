@@ -2,12 +2,33 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
+
+// voicemailJSON marshals a mailbox for storage; nil → nil []byte → SQL NULL.
+func voicemailJSON(vm *models.Voicemail) ([]byte, error) {
+	if vm == nil {
+		return nil, nil
+	}
+	return json.Marshal(vm)
+}
+
+// scanVoicemail unmarshals a JSONB column (NULL → nil mailbox).
+func scanVoicemail(raw []byte) (*models.Voicemail, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var vm models.Voicemail
+	if err := json.Unmarshal(raw, &vm); err != nil {
+		return nil, err
+	}
+	return &vm, nil
+}
 
 func (s *Store) domainID(ctx context.Context, name string) (string, error) {
 	var id string
@@ -30,11 +51,15 @@ func (s *Store) CreateUser(ctx context.Context, u *models.User) error {
 	if u.Variables == nil {
 		u.Variables = map[string]string{}
 	}
+	vmJSON, err := voicemailJSON(u.Voicemail)
+	if err != nil {
+		return err
+	}
 	err = s.pool.QueryRow(ctx, `
-		INSERT INTO users (id, domain_id, number, enabled, params, variables)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO users (id, domain_id, number, enabled, params, variables, voicemail)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING created_at, updated_at`,
-		u.ID, domainID, u.Number, u.Enabled, u.Params, u.Variables,
+		u.ID, domainID, u.Number, u.Enabled, u.Params, u.Variables, vmJSON,
 	).Scan(&u.CreatedAt, &u.UpdatedAt)
 	if isUniqueViolation(err) {
 		return ErrAlreadyExists
@@ -44,15 +69,19 @@ func (s *Store) CreateUser(ctx context.Context, u *models.User) error {
 
 func (s *Store) GetUser(ctx context.Context, domain, number string) (*models.User, error) {
 	var u models.User
+	var vmRaw []byte
 	err := s.pool.QueryRow(ctx, `
-		SELECT u.id, d.name, u.number, u.enabled, u.params, u.variables, u.created_at, u.updated_at
+		SELECT u.id, d.name, u.number, u.enabled, u.params, u.variables, u.voicemail, u.created_at, u.updated_at
 		FROM users u JOIN domains d ON d.id = u.domain_id
 		WHERE d.name = $1 AND u.number = $2`, domain, number,
-	).Scan(&u.ID, &u.Domain, &u.Number, &u.Enabled, &u.Params, &u.Variables, &u.CreatedAt, &u.UpdatedAt)
+	).Scan(&u.ID, &u.Domain, &u.Number, &u.Enabled, &u.Params, &u.Variables, &vmRaw, &u.CreatedAt, &u.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	if err != nil {
+		return nil, err
+	}
+	if u.Voicemail, err = scanVoicemail(vmRaw); err != nil {
 		return nil, err
 	}
 	return &u, nil
@@ -60,7 +89,7 @@ func (s *Store) GetUser(ctx context.Context, domain, number string) (*models.Use
 
 func (s *Store) ListUsers(ctx context.Context, domainFilter string) ([]models.User, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT u.id, d.name, u.number, u.enabled, u.params, u.variables, u.created_at, u.updated_at
+		SELECT u.id, d.name, u.number, u.enabled, u.params, u.variables, u.voicemail, u.created_at, u.updated_at
 		FROM users u JOIN domains d ON d.id = u.domain_id
 		WHERE ($1 = '' OR d.name = $1)
 		ORDER BY d.name, u.number`, domainFilter)
@@ -72,7 +101,11 @@ func (s *Store) ListUsers(ctx context.Context, domainFilter string) ([]models.Us
 	out := []models.User{}
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.Domain, &u.Number, &u.Enabled, &u.Params, &u.Variables, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		var vmRaw []byte
+		if err := rows.Scan(&u.ID, &u.Domain, &u.Number, &u.Enabled, &u.Params, &u.Variables, &vmRaw, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, err
+		}
+		if u.Voicemail, err = scanVoicemail(vmRaw); err != nil {
 			return nil, err
 		}
 		out = append(out, u)
@@ -87,13 +120,17 @@ func (s *Store) UpdateUser(ctx context.Context, domain, number string, u *models
 	if u.Variables == nil {
 		u.Variables = map[string]string{}
 	}
-	err := s.pool.QueryRow(ctx, `
+	vmJSON, err := voicemailJSON(u.Voicemail)
+	if err != nil {
+		return err
+	}
+	err = s.pool.QueryRow(ctx, `
 		UPDATE users u
-		SET enabled = $3, params = $4, variables = $5, updated_at = NOW()
+		SET enabled = $3, params = $4, variables = $5, voicemail = $6, updated_at = NOW()
 		FROM domains d
 		WHERE u.domain_id = d.id AND d.name = $1 AND u.number = $2
 		RETURNING u.id, d.name, u.number, u.created_at, u.updated_at`,
-		domain, number, u.Enabled, u.Params, u.Variables,
+		domain, number, u.Enabled, u.Params, u.Variables, vmJSON,
 	).Scan(&u.ID, &u.Domain, &u.Number, &u.CreatedAt, &u.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrNotFound

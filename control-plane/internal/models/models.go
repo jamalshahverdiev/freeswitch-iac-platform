@@ -19,8 +19,21 @@ type User struct {
 	Enabled   bool              `json:"enabled"`
 	Params    map[string]string `json:"params"`
 	Variables map[string]string `json:"variables"`
-	CreatedAt time.Time         `json:"created_at"`
-	UpdatedAt time.Time         `json:"updated_at"`
+	// Voicemail is the typed mailbox config. nil = no voicemail configured
+	// (nothing rendered); a non-nil value renders vm-* directory params.
+	Voicemail *Voicemail `json:"voicemail,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+}
+
+// Voicemail is a user's mod_voicemail mailbox, rendered into the directory as
+// vm-* params. It is the typed alternative to setting vm-* keys in Params.
+type Voicemail struct {
+	Enabled    bool   `json:"enabled"`
+	Password   string `json:"password,omitempty"`
+	Email      string `json:"email,omitempty"`
+	AttachFile bool   `json:"attach_file"`
+	EmailAll   bool   `json:"email_all"`
 }
 
 type Gateway struct {

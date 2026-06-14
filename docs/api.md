@@ -93,12 +93,13 @@ curl -s -X DELETE $API/api/v1/domains/192.168.48.143 "${H[@]}"   # cascades user
 ```bash
 curl -s $API/api/v1/users "${H[@]}" -d '{
   "domain":"192.168.48.143","number":"2001","enabled":true,
-  "params":{"password":"2580","vm-password":"2001"},
+  "params":{"password":"2580"},
   "variables":{
     "effective_caller_id_name":"IaC User 2001",
     "effective_caller_id_number":"2001",
     "user_context":"company"
-  }}'
+  },
+  "voicemail":{"enabled":true,"password":"2001","email":"u2001@example.com","attach_file":true}}'
 
 curl -s "$API/api/v1/users?domain=192.168.48.143" "${H[@]}"   # list (optional ?domain=)
 curl -s $API/api/v1/users/192.168.48.143/2001 "${H[@]}"        # get
@@ -110,11 +111,30 @@ curl -s -X DELETE $API/api/v1/users/192.168.48.143/2001 "${H[@]}"
 |---|---|---|---|
 | domain | string | yes | must already exist (else 404) |
 | number | string | yes | unique within domain |
-| params | map | no | `password`, `vm-password`, … → `<param>` |
+| params | map | no | `password`, … → `<param>` (escape hatch for arbitrary directory params) |
 | variables | map | no | **set `user_context` to route the user's calls into your context** |
+| voicemail | object | no | typed mailbox (see below); omit for no voicemail |
 
 `params.password` is what the SIP phone authenticates with. `user_context`
 decides which dialplan context the user's calls enter.
+
+### Voicemail
+
+The `voicemail` object is the typed alternative to hand-setting `vm-*` keys in
+`params`. It is expanded into `mod_voicemail` directory params when the user is
+rendered; if set, it overrides any matching freeform `vm-*` key.
+
+| field | type | default | directory param |
+|---|---|---|---|
+| enabled | bool | `false` | `vm-enabled` |
+| password | string | — | `vm-password` (PIN; redacted in the audit log) |
+| email | string | — | `vm-mailto` |
+| attach_file | bool | `false` | `vm-attach-file` |
+| email_all | bool | `false` | `vm-email-all-messages` |
+
+Messages are stored by FreeSWITCH in the `freeswitch_core` database (the
+`voicemail.conf` profile's `odbc-dsn`). `voicemail.password` is never returned
+in directory XML and is redacted (`***`) in the audit log.
 
 ---
 

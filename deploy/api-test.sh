@@ -75,6 +75,15 @@ req GET  "/api/v1/users?domain=demo.test";         check "list users by domain -
 req PUT  /api/v1/users/demo.test/3001 '{"params":{"password":"p2"},"variables":{"effective_caller_id_name":"Updated"}}'
 check "update user -> 200" 200 "$CODE"; contains "user updated" 'Updated'
 
+echo "== voicemail (typed mailbox on user) =="
+# 3002 stays alive — its directory render (vm-* params) is asserted in the XML section.
+req POST /api/v1/users '{"domain":"demo.test","number":"3002","params":{"password":"p1"},"voicemail":{"enabled":true,"password":"1234","email":"vm@demo.test","attach_file":true}}'
+check "create user with voicemail -> 201" 201 "$CODE"; contains "voicemail echoed" '"voicemail":{'
+req POST /api/v1/users '{"domain":"demo.test","number":"3003","voicemail":{"enabled":true,"email":"bad-email"}}'
+check "voicemail bad email -> 400" 400 "$CODE"
+req GET  /api/v1/users/demo.test/3002
+check "get user with voicemail -> 200" 200 "$CODE"; contains "vm email kept" '"email":"vm@demo.test"'
+
 echo "== gateways CRUD =="
 req POST /api/v1/gateways '{"name":"test-trunk","profile":"external","proxy":"sip.example.com","username":"u","password":"s","register":true}'
 check "create gateway -> 201" 201 "$CODE"
@@ -144,6 +153,10 @@ NOBASIC=$(curl -s "${CACERT[@]}" "${CLIENTCERT[@]}" -o /dev/null -w "%{http_code
 check "xml without basic auth -> 401" 401 "$NOBASIC"
 xmlpost /xml/directory 'user=3001&domain=demo.test'
 contains "directory serves 3001" 'user id="3001"'
+# typed voicemail on 3002 renders vm-* directory params
+xmlpost /xml/directory 'user=3002&domain=demo.test'
+contains "directory has vm-enabled" 'name="vm-enabled" value="true"'
+contains "directory has vm-mailto"  'name="vm-mailto" value="vm@demo.test"'
 xmlpost /xml/directory 'user=9999&domain=demo.test'
 contains "unknown user -> not found" 'status="not found"'
 xmlpost /xml/dialplan 'context=demo'
@@ -226,6 +239,7 @@ req GET    /api/v1/conference/rooms/r-test;       check "conf room gone -> 404" 
 req DELETE /api/v1/callcenter/queues/q-test@demo.test; check "delete queue (cascade tier) -> 204" 204 "$CODE"
 req DELETE /api/v1/callcenter/agents/a-test@demo.test; check "delete agent -> 204" 204 "$CODE"
 req GET    /api/v1/callcenter/queues/q-test@demo.test; check "queue gone -> 404" 404 "$CODE"
+req DELETE /api/v1/users/demo.test/3002;          check "delete vm user -> 204" 204 "$CODE"
 req DELETE /api/v1/users/demo.test/3001;          check "delete user -> 204" 204 "$CODE"
 req DELETE /api/v1/domains/demo.test;             check "delete domain (cascade) -> 204" 204 "$CODE"
 req GET    /api/v1/domains/demo.test;             check "domain gone -> 404" 404 "$CODE"

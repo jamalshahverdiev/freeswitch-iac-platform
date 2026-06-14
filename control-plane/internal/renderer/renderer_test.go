@@ -67,6 +67,40 @@ func TestRenderDirectoryA1Hash(t *testing.T) {
 	}
 }
 
+func TestRenderDirectoryVoicemail(t *testing.T) {
+	out := must(t)(RenderDirectory([]models.DomainWithUsers{{
+		Domain: models.Domain{Name: "lab.test"},
+		Users: []models.User{{
+			Number: "1002",
+			Params: map[string]string{"password": "s3cret", "vm-password": "stale"},
+			Voicemail: &models.Voicemail{
+				Enabled: true, Password: "1234", Email: "a@b.com",
+				AttachFile: true, EmailAll: false,
+			},
+		}},
+	}}))
+
+	wantContains(t, out,
+		`<param name="vm-enabled" value="true">`,
+		// typed password wins over the freeform vm-password key
+		`<param name="vm-password" value="1234">`,
+		`<param name="vm-mailto" value="a@b.com">`,
+		`<param name="vm-attach-file" value="true">`,
+		`<param name="vm-email-all-messages" value="false">`,
+	)
+	// the stale freeform vm-password must not survive
+	wantNotContains(t, out, `value="stale"`)
+}
+
+func TestRenderDirectoryNoVoicemail(t *testing.T) {
+	out := must(t)(RenderDirectory([]models.DomainWithUsers{{
+		Domain: models.Domain{Name: "lab.test"},
+		Users:  []models.User{{Number: "1003", Params: map[string]string{"password": "x"}}},
+	}}))
+	// nil mailbox renders no vm-* params at all
+	wantNotContains(t, out, "vm-enabled", "vm-mailto", "vm-attach-file")
+}
+
 // ---------- dialplan ----------
 
 func dpExt(name, context string, prio int, enabled bool) models.DialplanExtension {

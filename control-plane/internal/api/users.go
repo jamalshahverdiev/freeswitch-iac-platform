@@ -2,10 +2,22 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/models"
 	"github.com/go-chi/chi/v5"
 )
+
+// validateVoicemail returns a non-empty message if the mailbox is invalid.
+func validateVoicemail(vm *models.Voicemail) string {
+	if vm == nil {
+		return ""
+	}
+	if vm.Email != "" && !strings.Contains(vm.Email, "@") {
+		return "voicemail.email must be a valid email address"
+	}
+	return ""
+}
 
 func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	var u models.User
@@ -16,6 +28,10 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	if u.Domain == "" || u.Number == "" {
 		writeError(w, http.StatusBadRequest, "validation_error", "domain and number are required")
+		return
+	}
+	if msg := validateVoicemail(u.Voicemail); msg != "" {
+		writeError(w, http.StatusBadRequest, "validation_error", msg)
 		return
 	}
 	if err := s.store.CreateUser(r.Context(), &u); writeStoreError(w, err) {
@@ -52,6 +68,10 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	u.Enabled = true
 	if err := decodeJSON(r, &u); err != nil {
 		writeError(w, http.StatusBadRequest, "validation_error", "invalid request body")
+		return
+	}
+	if msg := validateVoicemail(u.Voicemail); msg != "" {
+		writeError(w, http.StatusBadRequest, "validation_error", msg)
 		return
 	}
 	if err := s.store.UpdateUser(r.Context(), domain, number, &u); writeStoreError(w, err) {

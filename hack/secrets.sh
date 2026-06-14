@@ -18,6 +18,7 @@ FILES=(
   "deploy/SECRETS.md"
   "deploy/freeswitch/event_socket.conf.xml"
   "deploy/freeswitch/xml_curl.conf.xml"
+  "deploy/freeswitch/json_cdr.conf.xml"
   "deploy/freeswitch/nginx/recordings.htpasswd"
 )
 # deploy/tls/ is a directory -> tarball deploy/tls.tar.age
@@ -25,17 +26,50 @@ TLS_DIR="deploy/tls"
 
 recipient() { /usr/bin/age-keygen -y "$KEY"; }
 
+# fileUnchanged <plain> — true if <plain>.age exists and decrypts to the exact
+# same bytes as <plain>. Lets encrypt skip rewriting unchanged secrets (age uses
+# a random nonce, so re-encrypting always changes the ciphertext = noisy diffs).
+fileUnchanged() {
+  local f="$1"
+  [ -f "$DIR/$f.age" ] || return 1
+  $AGE -d -i "$KEY" "$DIR/$f.age" 2>/dev/null | cmp -s - "$DIR/$f"
+}
+
+# content signature of a directory tree: sorted "sha256  relpath" lines.
+tlsSig() { (cd "$1" && find . -type f -exec sha256sum {} \; | sort); }
+
+# tlsUnchanged — true if tls.tar.age decrypts to the same file contents as the
+# current deploy/tls/ tree (ignores tar mtimes).
+tlsUnchanged() {
+  [ -f "$DIR/deploy/tls.tar.age" ] || return 1
+  local tmp cur old
+  tmp=$(mktemp -d)
+  $AGE -d -i "$KEY" "$DIR/deploy/tls.tar.age" 2>/dev/null | tar -C "$tmp" -xf - 2>/dev/null || { rm -rf "$tmp"; return 1; }
+  cur=$(tlsSig "$DIR/$TLS_DIR")
+  old=$(tlsSig "$tmp/$TLS_DIR")
+  rm -rf "$tmp"
+  [ "$cur" = "$old" ]
+}
+
 case "${1:-}" in
   encrypt)
     R=$(recipient)
     for f in "${FILES[@]}"; do
       [ -f "$DIR/$f" ] || { echo "skip (missing): $f"; continue; }
+      if fileUnchanged "$f"; then
+        echo "unchanged: $f.age"
+        continue
+      fi
       $AGE -r "$R" -o "$DIR/$f.age" "$DIR/$f"
       echo "encrypted: $f.age"
     done
     if [ -d "$DIR/$TLS_DIR" ]; then
-      tar -C "$DIR" -cf - "$TLS_DIR" | $AGE -r "$R" -o "$DIR/deploy/tls.tar.age"
-      echo "encrypted: deploy/tls.tar.age"
+      if tlsUnchanged; then
+        echo "unchanged: deploy/tls.tar.age"
+      else
+        tar -C "$DIR" -cf - "$TLS_DIR" | $AGE -r "$R" -o "$DIR/deploy/tls.tar.age"
+        echo "encrypted: deploy/tls.tar.age"
+      fi
     fi
     ;;
   decrypt)

@@ -23,6 +23,9 @@ Open dashboard **FreeSWITCH → FreeSWITCH NOC**. Panels:
 - Live calls, Registered endpoints, Waiting in queue, Available agents (stats)
 - Users / Dialplan extensions / Queues / Conference rooms (desired-state counts)
 - Call-center agents table, live queue members, SIP registrations
+- **CDR (history)**: calls/answered/abandoned today, talk time, calls-per-day
+  (14 d) bar chart, recent calls — fed by `mod_json_cdr` → `POST /cdr` → the
+  `cdr` table in freeswitch_control (see [api.md](api.md#call-detail-records-cdr)).
 
 ## How it is wired (all version-controlled)
 

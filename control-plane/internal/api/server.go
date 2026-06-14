@@ -89,6 +89,8 @@ func (s *Server) Router() http.Handler {
 		r.Handle("/xml/directory", http.HandlerFunc(s.handleXMLDirectory))
 		r.Handle("/xml/dialplan", http.HandlerFunc(s.handleXMLDialplan))
 		r.Handle("/xml/configuration", http.HandlerFunc(s.handleXMLConfiguration))
+		// CDR ingest is also FreeSWITCH-facing (mod_json_cdr) — same guard.
+		r.Post("/cdr", s.handlePostCDR)
 	})
 
 	// Management API (token-protected).
@@ -150,6 +152,9 @@ func (s *Server) Router() http.Handler {
 		r.Delete("/conference/rooms/{name}", s.handleDeleteConfRoom)
 
 		r.Get("/audit", s.handleListAudit)
+
+		r.Get("/cdr", s.handleListCDR)
+		r.Get("/cdr/stats", s.handleCDRStats)
 
 		r.Post("/runtime/reloadxml", s.handleReloadXML)
 		r.Get("/runtime/health", s.handleRuntimeHealth)

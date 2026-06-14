@@ -402,6 +402,32 @@ hash); `vm-password` (voicemail PIN) is still emitted as-is.
 
 ---
 
+## Call detail records (CDR)
+
+FreeSWITCH `mod_json_cdr` POSTs each call's CDR (JSON) to **`POST /cdr`**, which
+sits behind the same guard as `/xml/*` (HTTPS + mTLS client cert + Basic auth).
+The control-plane parses it (uuid/times/cause from `variables`, caller &
+destination from `callflow[].caller_profile`) and stores it in the `cdr` table
+(plus the full payload in a `raw` JSONB column). Ingest is idempotent on the
+channel uuid, so `mod_json_cdr`'s retry queue can't create duplicates.
+
+Server config: `deploy/freeswitch/json_cdr.conf.xml` (url
+`https://172.31.30.216:8080/cdr`, same client cert + creds as xml_curl; failed
+posts spool to disk and retry — no CDR lost while the control-plane is down).
+
+Read it back (Bearer token):
+
+```bash
+curl -s "$API/api/v1/cdr?number=4201&limit=50" "${H[@]}"      # filters: number, cause, from, to (epoch), answered=true
+#   newest first, X-Total-Count header
+curl -s "$API/api/v1/cdr/stats?from=&to=" "${H[@]}"            # per-day rollups
+#   -> [{"day":"2026-06-14","total","answered","abandoned","talk_time","avg_billsec"}, ...]
+```
+
+CDRs are append-only (no update/delete API). Grafana panels in the NOC
+dashboard chart calls/answered/abandoned per day and talk time (see
+[observability](observability.md)).
+
 ## Pagination
 
 All `GET` list endpoints accept optional `?limit=N&offset=M`. Without them the

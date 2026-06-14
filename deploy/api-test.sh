@@ -160,6 +160,18 @@ req GET "/api/v1/audit?resource_type=freeswitch_domain&limit=1"
 check "audit filter by resource_type -> 200" 200 "$CODE"; contains "audit entry is for a domain" '"resource_type":"freeswitch_domain"'
 req GET "/api/v1/audit?limit=notanint";             check "audit bad limit -> 400" 400 "$CODE"
 
+echo "== CDR (mod_json_cdr ingest + read) =="
+# POST /cdr is FreeSWITCH-facing: needs the same mTLS client cert + Basic auth.
+CDRCODE=$(curl -s "${CACERT[@]}" "${CLIENTCERT[@]}" -o /dev/null -w "%{http_code}" -u "$XML_USER:$XML_PASSWORD" \
+  -X POST "$API/cdr" -H "Content-Type: application/json" \
+  --data '{"variables":{"uuid":"apitest-cdr-1","direction":"inbound","hangup_cause":"NORMAL_CLEARING","start_epoch":"1718200000","answer_epoch":"1718200002","end_epoch":"1718200042","duration":"42","billsec":"40"},"callflow":[{"caller_profile":{"caller_id_number":"3001","destination_number":"7000","context":"demo"}}]}')
+check "post cdr (mTLS+Basic) -> 200" 200 "$CDRCODE"
+CDRNOAUTH=$(curl -s "${CACERT[@]}" -o /dev/null -w "%{http_code}" -X POST "$API/cdr" --data '{}')
+check "post cdr without mTLS -> 401" 401 "$CDRNOAUTH"
+req GET "/api/v1/cdr?number=3001"; check "list cdr by number -> 200" 200 "$CODE"; contains "cdr has destination" '"destination_number":"7000"'
+req GET "/api/v1/cdr/stats";        check "cdr stats -> 200" 200 "$CODE"; contains "cdr stats has talk_time" '"talk_time"'
+req GET "/api/v1/cdr?from=notanumber&limit=bad"; check "cdr bad limit -> 400" 400 "$CODE"
+
 echo "== pagination =="
 req GET "/api/v1/domains?limit=1";   check "domains limit=1 -> 200" 200 "$CODE"
 req GET "/api/v1/domains?limit=abc"; check "domains bad limit -> 400" 400 "$CODE"

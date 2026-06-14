@@ -23,3 +23,4 @@ control-plane/control-plane
 # Plaintext of encrypted-in-repo files (see hack/secrets.sh; commit only *.age)
 deploy/freeswitch/event_socket.conf.xml
 deploy/freeswitch/xml_curl.conf.xml
+deploy/freeswitch/json_cdr.conf.xml

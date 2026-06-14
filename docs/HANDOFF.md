@@ -5,7 +5,7 @@ state, how to operate the system, every credential/address, the gotchas that
 already bit us, and the concrete next milestones. Pair it with the saved memory
 files and with `docs/architecture.md` + `docs/api.md`.
 
-Date of last update: 2026-06-11.
+Date of last update: 2026-06-14.
 
 **WORKING TREE: `/home/jamal/github/freeswitch-iac-platform`** (git ->
 github.com/jamalshahverdiev/freeswitch-iac-platform). The provider lives in
@@ -209,7 +209,15 @@ grep "done playing file" /var/log/freeswitch/freeswitch.log
   mTLS (client cert) + Basic auth (+ optional XML_ALLOW_CIDRS) + not-found
   fallback; directory sends `a1-hash` not plaintext password (REGISTER 200/403
   verified); ESL non-default password + ACL; audit redacts passwords.
-- `deploy/api-test.sh` = 53/53 over HTTPS+mTLS.
+- `deploy/api-test.sh` = 126/126 over HTTPS+mTLS (latest: adds CDR, SSE events,
+  wallboard, time-based routing, phone provisioning).
+- **Phone provisioning DONE:** `provisioned_devices` (migration 000006) + CRUD
+  `/api/v1/devices` (bearer) + phone-facing `GET /provision/{file}` (Basic auth
+  `PROVISION_USER/PASSWORD` + `PROVISION_ALLOW_CIDRS`). Renders Yealink `.cfg`,
+  Grandstream `cfg<mac>.xml`, generic `.xml`; SIP password is read from the
+  matching user at render time (never stored on the device). Terraform resource
+  `freeswitch_device` (id=mac, import by mac). Docs: `docs/api.md` §Phone
+  provisioning. Env in `.env`/compose: `PROVISION_*`.
 - Terraform provider (Milestone B) DONE: `provider/` builds, e2e verified with
   OpenTofu (apply/plan-noop/import/destroy). See §9.
 - IVR/TTS DONE: `mod_flite` enabled; IVR audio via Terraform either runtime TTS

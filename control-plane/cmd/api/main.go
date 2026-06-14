@@ -72,6 +72,11 @@ func main() {
 		RecUser:              cfg.RecUser,
 		RecPassword:          cfg.RecPassword,
 		Hub:                  hub,
+		ProvisionUser:        cfg.ProvisionUser,
+		ProvisionPassword:    cfg.ProvisionPassword,
+		ProvisionAllowCIDRs:  cfg.ProvisionAllowCIDRs,
+		ProvisionSIPServer:   cfg.ProvisionSIPServer,
+		ProvisionSIPPort:     cfg.ProvisionSIPPort,
 	}, log)
 
 	httpServer := &http.Server{

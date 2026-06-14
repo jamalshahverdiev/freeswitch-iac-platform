@@ -15,6 +15,9 @@ CLIENT_CERT="${CLIENT_CERT:-$TLSDIR/client.crt}"
 CLIENT_KEY="${CLIENT_KEY:-$TLSDIR/client.key}"
 CACERT=(); [ -f "$CA" ] && CACERT=(--cacert "$CA")
 CLIENTCERT=(); [ -f "$CLIENT_CERT" ] && CLIENTCERT=(--cert "$CLIENT_CERT" --key "$CLIENT_KEY")
+# Phone provisioning is behind Basic auth (PROVISION_USER/PASSWORD).
+PROVISION_USER="${PROVISION_USER:-provision}"
+PROVISION_PASSWORD="${PROVISION_PASSWORD:-}"
 TMP=$(mktemp)
 PASS=0; FAIL=0
 
@@ -180,6 +183,24 @@ req GET "/api/v1/cdr?number=3001"; check "list cdr by number -> 200" 200 "$CODE"
 req GET "/api/v1/cdr/stats";        check "cdr stats -> 200" 200 "$CODE"; contains "cdr stats has talk_time" '"talk_time"'
 req GET "/api/v1/cdr?from=notanumber&limit=bad"; check "cdr bad limit -> 400" 400 "$CODE"
 
+echo "== phone provisioning (devices + /provision) =="
+req POST /api/v1/devices '{"mac":"00:11:22:AA:BB:CC","number":"3001","domain":"demo.test","display_name":"Reception"}'
+check "create device -> 201" 201 "$CODE"; contains "mac normalized" '"mac":"001122aabbcc"'; contains "vendor default yealink" '"vendor":"yealink"'
+req POST /api/v1/devices '{"mac":"001122aabbcc","number":"3001","domain":"demo.test"}'; check "duplicate device -> 409" 409 "$CODE"
+req POST /api/v1/devices '{"mac":"x","number":"3001","domain":"demo.test","vendor":"cisco"}'; check "bad vendor -> 400" 400 "$CODE"
+req GET  /api/v1/devices/001122aabbcc;             check "get device -> 200" 200 "$CODE"; contains "device number" '"number":"3001"'
+req GET  /api/v1/devices;                          check "list devices -> 200" 200 "$CODE"
+req PUT  /api/v1/devices/001122aabbcc '{"number":"3001","domain":"demo.test","vendor":"grandstream","enabled":true}'
+check "update device vendor -> 200" 200 "$CODE"; contains "vendor updated" '"vendor":"grandstream"'
+# /provision/<mac> is phone-facing: Basic auth, renders the SIP password from the user.
+PROVNOAUTH=$(curl -s "${CACERT[@]}" -o /dev/null -w "%{http_code}" "$API/provision/001122aabbcc.xml")
+check "provision without auth -> 401" 401 "$PROVNOAUTH"
+PROVCODE=$(curl -s "${CACERT[@]}" -u "$PROVISION_USER:$PROVISION_PASSWORD" -o "$TMP" -w "%{http_code}" "$API/provision/cfg001122aabbcc.xml")
+check "provision grandstream -> 200" 200 "$PROVCODE"
+contains "provision has sip server" '192.168.48.143'; contains "provision has account number" '<P35>3001</P35>'
+PROVMISS=$(curl -s "${CACERT[@]}" -u "$PROVISION_USER:$PROVISION_PASSWORD" -o /dev/null -w "%{http_code}" "$API/provision/deadbeef0000.cfg")
+check "provision unknown mac -> 404" 404 "$PROVMISS"
+
 echo "== pagination =="
 req GET "/api/v1/domains?limit=1";   check "domains limit=1 -> 200" 200 "$CODE"
 req GET "/api/v1/domains?limit=abc"; check "domains bad limit -> 400" 400 "$CODE"
@@ -192,6 +213,8 @@ req GET  /api/v1/runtime/registrations/demo.test/3001; check "registration looku
 req GET  /api/v1/runtime/gateways/external/test-trunk; check "runtime gateway (not loaded) -> 404" 404 "$CODE"
 
 echo "== delete / cleanup =="
+req DELETE /api/v1/devices/001122aabbcc;          check "delete device -> 204" 204 "$CODE"
+req GET    /api/v1/devices/001122aabbcc;          check "device gone -> 404" 404 "$CODE"
 req DELETE "/api/v1/dialplan/extensions/$EXTID";  check "delete extension -> 204" 204 "$CODE"
 req GET    "/api/v1/dialplan/extensions/$EXTID";  check "deleted extension -> 404" 404 "$CODE"
 req DELETE "/api/v1/dialplan/extensions/$TRID";   check "delete time ext -> 204" 204 "$CODE"

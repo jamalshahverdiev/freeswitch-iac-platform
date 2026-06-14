@@ -29,6 +29,11 @@ type Server struct {
 	recUser      string
 	recPass      string
 	hub          *events.Hub
+	provUser     string
+	provPass     string
+	provAllow    []*net.IPNet
+	provSIPServer string
+	provSIPPort   string
 	log          *slog.Logger
 }
 
@@ -48,6 +53,13 @@ type Options struct {
 	RecPassword string
 	// Hub streams telephony events to GET /api/v1/events (SSE). May be nil.
 	Hub *events.Hub
+	// Phone provisioning (GET /provision/*): Basic auth + CIDR allowlist guard,
+	// and the SIP server/port phones register to.
+	ProvisionUser       string
+	ProvisionPassword   string
+	ProvisionAllowCIDRs []string
+	ProvisionSIPServer  string
+	ProvisionSIPPort    string
 }
 
 func NewServer(st *store.Store, au *audit.Recorder, esl *runtime.Client, opts Options, log *slog.Logger) *Server {
@@ -60,11 +72,15 @@ func NewServer(st *store.Store, au *audit.Recorder, esl *runtime.Client, opts Op
 		xmlPass:      opts.XMLPassword,
 		xmlClientTLS: opts.XMLRequireClientCert,
 		ccOdbcDSN:    opts.CCOdbcDSN,
-		recURL:       opts.RecURL,
-		recUser:      opts.RecUser,
-		recPass:      opts.RecPassword,
-		hub:          opts.Hub,
-		log:          log,
+		recURL:        opts.RecURL,
+		recUser:       opts.RecUser,
+		recPass:       opts.RecPassword,
+		hub:           opts.Hub,
+		provUser:      opts.ProvisionUser,
+		provPass:      opts.ProvisionPassword,
+		provSIPServer: opts.ProvisionSIPServer,
+		provSIPPort:   opts.ProvisionSIPPort,
+		log:           log,
 	}
 	for _, c := range opts.XMLAllowCIDRs {
 		if _, ipnet, err := net.ParseCIDR(c); err == nil {
@@ -72,6 +88,16 @@ func NewServer(st *store.Store, au *audit.Recorder, esl *runtime.Client, opts Op
 		} else {
 			log.Warn("ignoring invalid XML_ALLOW_CIDRS entry", "cidr", c, "err", err)
 		}
+	}
+	for _, c := range opts.ProvisionAllowCIDRs {
+		if _, ipnet, err := net.ParseCIDR(c); err == nil {
+			s.provAllow = append(s.provAllow, ipnet)
+		} else {
+			log.Warn("ignoring invalid PROVISION_ALLOW_CIDRS entry", "cidr", c, "err", err)
+		}
+	}
+	if s.provPass == "" && len(s.provAllow) == 0 {
+		log.Warn("/provision/* is UNAUTHENTICATED — set PROVISION_PASSWORD and/or PROVISION_ALLOW_CIDRS (configs contain the SIP password)")
 	}
 	if s.xmlPass == "" && len(s.xmlAllow) == 0 && !s.xmlClientTLS {
 		log.Warn("/xml/* endpoints are UNAUTHENTICATED — set XML_PASSWORD, XML_ALLOW_CIDRS and/or mTLS to protect SIP credentials")
@@ -90,6 +116,12 @@ func (s *Server) Router() http.Handler {
 	// Supervisor wallboard (static HTML shell; auth happens in-browser for the
 	// /api/v1/events fetch). Live data comes from the SSE stream.
 	r.Get("/wallboard", s.handleWallboard)
+
+	// Phone provisioning: device-facing config fetch (Basic auth + CIDR).
+	r.Group(func(r chi.Router) {
+		r.Use(s.provisionGuard)
+		r.Get("/provision/{file}", s.handleProvision)
+	})
 
 	// FreeSWITCH-facing XML endpoints. Protected by Basic auth and/or an IP
 	// allowlist (they expose SIP/trunk secrets), consumed by mod_xml_curl.
@@ -167,6 +199,12 @@ func (s *Server) Router() http.Handler {
 
 		r.Get("/events", s.handleEvents)
 
+		r.Post("/devices", s.handleCreateDevice)
+		r.Get("/devices", s.handleListDevices)
+		r.Get("/devices/{mac}", s.handleGetDevice)
+		r.Put("/devices/{mac}", s.handleUpdateDevice)
+		r.Delete("/devices/{mac}", s.handleDeleteDevice)
+
 		r.Post("/runtime/reloadxml", s.handleReloadXML)
 		r.Get("/runtime/health", s.handleRuntimeHealth)
 		r.Get("/runtime/gateways/{profile}/{name}", s.handleRuntimeGatewayStatus)
@@ -228,7 +266,9 @@ func (s *Server) xmlGuard(next http.Handler) http.Handler {
 	})
 }
 
-func (s *Server) ipAllowed(r *http.Request) bool {
+func (s *Server) ipAllowed(r *http.Request) bool { return ipInList(r, s.xmlAllow) }
+
+func ipInList(r *http.Request, list []*net.IPNet) bool {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		host = r.RemoteAddr
@@ -237,12 +277,35 @@ func (s *Server) ipAllowed(r *http.Request) bool {
 	if ip == nil {
 		return false
 	}
-	for _, n := range s.xmlAllow {
+	for _, n := range list {
 		if n.Contains(ip) {
 			return true
 		}
 	}
 	return false
+}
+
+// provisionGuard protects /provision/* (phone-facing, configs hold the SIP
+// password): optional CIDR allowlist + optional HTTP Basic auth.
+func (s *Server) provisionGuard(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if len(s.provAllow) > 0 && !ipInList(r, s.provAllow) {
+			s.log.Warn("provision denied by ip allowlist", "remote", r.RemoteAddr, "path", r.URL.Path)
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		if s.provPass != "" {
+			u, p, ok := r.BasicAuth()
+			userOK := subtle.ConstantTimeCompare([]byte(u), []byte(s.provUser)) == 1
+			passOK := subtle.ConstantTimeCompare([]byte(p), []byte(s.provPass)) == 1
+			if !ok || !userOK || !passOK {
+				w.Header().Set("WWW-Authenticate", `Basic realm="provision"`)
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) requestLogger(next http.Handler) http.Handler {

@@ -78,6 +78,28 @@ type DialplanExtension struct {
 	UpdatedAt  time.Time           `json:"updated_at"`
 }
 
+// VoicemailMessage is one stored message read from freeswitch_core
+// (mod_voicemail's voicemail_msgs table). Read-only.
+type VoicemailMessage struct {
+	UUID         string `json:"uuid"`
+	Folder       string `json:"folder"`
+	CIDName      string `json:"cid_name"`
+	CIDNumber    string `json:"cid_number"`
+	CreatedEpoch int64  `json:"created_epoch"`
+	ReadEpoch    int64  `json:"read_epoch"`
+	MessageLen   int    `json:"message_len"` // seconds
+	Read         bool   `json:"read"`
+}
+
+// VoicemailBox is a user's mailbox contents plus the MWI counters.
+type VoicemailBox struct {
+	Domain   string             `json:"domain"`
+	Number   string             `json:"number"`
+	Total    int                `json:"total"`
+	Unread   int                `json:"unread"`
+	Messages []VoicemailMessage `json:"messages"`
+}
+
 // DomainWithUsers is the aggregate used by the directory renderer.
 type DomainWithUsers struct {
 	Domain Domain

@@ -38,6 +38,8 @@ services:
       context: ./control-plane
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-freeswitch}:${POSTGRES_PASSWORD:-freeswitch}@postgres:5432/${POSTGRES_DB:-freeswitch_control}?sslmode=disable
+      # Read-only access to freeswitch_core for the voicemail read API (MWI + list).
+      CORE_DATABASE_URL: postgres://${POSTGRES_USER:-freeswitch}:${POSTGRES_PASSWORD:-freeswitch}@postgres:5432/freeswitch_core?sslmode=disable
       API_TOKEN: ${API_TOKEN:-dev-token}
       HTTP_ADDR: ":8080"
       ESL_ADDR: ${ESL_ADDR:-192.168.48.143:8021}

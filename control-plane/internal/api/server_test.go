@@ -222,6 +222,14 @@ func TestEventsDisabledWithoutHub(t *testing.T) {
 	}
 }
 
+func TestVoicemailRequiresCorePool(t *testing.T) {
+	h := testServer(t, Options{}) // no VoicemailStore
+	rec := do(t, h, http.MethodGet, "/api/v1/voicemail/demo.test/3001", "test-token", "")
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("got %d want 503 when core pool is nil", rec.Code)
+	}
+}
+
 func TestRuntimeRequiresESL(t *testing.T) {
 	h := testServer(t, Options{})
 	tok := "test-token"

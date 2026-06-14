@@ -49,6 +49,19 @@ func main() {
 	au := audit.New(pool)
 	esl := runtime.New(cfg.ESLAddr, cfg.ESLPassword, cfg.ESLTimeout)
 
+	// Optional read-only pool to freeswitch_core for the voicemail read API.
+	var vmStore *store.VoicemailStore
+	if cfg.CoreDatabaseURL != "" {
+		corePool, err := db.Connect(ctx, cfg.CoreDatabaseURL)
+		if err != nil {
+			log.Error("core database connect", "err", err)
+			os.Exit(1)
+		}
+		defer corePool.Close()
+		vmStore = store.NewVoicemail(corePool)
+		log.Info("voicemail read API enabled (freeswitch_core connected)")
+	}
+
 	// Live event stream: a persistent ESL listener feeds an in-process hub that
 	// GET /api/v1/events (SSE) fans out. Runs only when ESL is configured.
 	hub := events.NewHub()
@@ -69,6 +82,7 @@ func main() {
 		XMLRequireClientCert: mtls,
 		CCOdbcDSN:            cfg.CCOdbcDSN,
 		VMOdbcDSN:            cfg.VMOdbcDSN,
+		VoicemailStore:       vmStore,
 		RecURL:               cfg.RecURL,
 		RecUser:              cfg.RecUser,
 		RecPassword:          cfg.RecPassword,

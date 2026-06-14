@@ -10,7 +10,10 @@ import (
 type Config struct {
 	HTTPAddr    string
 	DatabaseURL string
-	APIToken    string
+	// CoreDatabaseURL points at freeswitch_core (mod_voicemail's message store).
+	// Read-only use. Empty disables the voicemail read API (endpoint → 503).
+	CoreDatabaseURL string
+	APIToken        string
 	ESLAddr     string
 	ESLPassword string
 	ESLTimeout  time.Duration
@@ -48,9 +51,10 @@ type Config struct {
 
 func Load() (Config, error) {
 	cfg := Config{
-		HTTPAddr:      env("HTTP_ADDR", ":8080"),
-		DatabaseURL:   env("DATABASE_URL", ""),
-		APIToken:      env("API_TOKEN", "dev-token"),
+		HTTPAddr:        env("HTTP_ADDR", ":8080"),
+		DatabaseURL:     env("DATABASE_URL", ""),
+		CoreDatabaseURL: env("CORE_DATABASE_URL", ""),
+		APIToken:        env("API_TOKEN", "dev-token"),
 		ESLAddr:       env("ESL_ADDR", ""),
 		ESLPassword:   env("ESL_PASSWORD", "ClueCon"),
 		ESLTimeout:    5 * time.Second,

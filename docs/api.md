@@ -136,6 +136,23 @@ Messages are stored by FreeSWITCH in the `freeswitch_core` database (the
 `voicemail.conf` profile's `odbc-dsn`). `voicemail.password` is never returned
 in directory XML and is redacted (`***`) in the audit log.
 
+### Reading messages (MWI)
+
+`GET /api/v1/voicemail/{domain}/{number}` returns a user's mailbox — message
+list newest-first plus `total`/`unread` counters (unread = `read_epoch == 0`).
+This reads the **`freeswitch_core`** database directly (separate read-only
+pool); it returns **503** unless `CORE_DATABASE_URL` is configured.
+
+```bash
+curl -s $API/api/v1/voicemail/192.168.48.143/2001 "${H[@]}"
+# -> {"domain":"...","number":"2001","total":2,"unread":1,"messages":[
+#      {"uuid":"...","folder":"inbox","cid_name":"Alice","cid_number":"1001",
+#       "created_epoch":1718200000,"read_epoch":0,"message_len":12,"read":false}, ...]}
+```
+
+This data is written by FreeSWITCH, never by the control-plane — the endpoint
+is read-only (no create/delete).
+
 ---
 
 ## Gateways (SIP trunks)

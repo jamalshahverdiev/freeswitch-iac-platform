@@ -273,8 +273,13 @@ Verified: grafana_ro reads all 3 DBs / write denied; Grafana :3000 up, 3 datasou
         from `VM_ODBC_DSN` (→ freeswitch_core). Parity with callcenter/conference:
         the configuration binding stays off on the live FS by choice, on-disk
         remains authoritative. Verified: renderer tests + api-test 136.
-  - [ ] **#3 Read API** — `GET /api/v1/voicemail/{domain}/{number}` + unread
-        (MWI) count from a read-only `freeswitch_core` pool; data source.
+  - [x] **#3 Read API** — `GET /api/v1/voicemail/{domain}/{number}` returns the
+        mailbox (messages newest-first + total/unread MWI counters) from a
+        SEPARATE read-only `freeswitch_core` pool (`CORE_DATABASE_URL`; nil→503).
+        Reads `voicemail_msgs` (unread = read_epoch==0), never writes. Provider
+        data source `freeswitch_voicemail`. Verified: handler 503 test, api-test
+        139, live read of synthetic rows (total=2/unread=1, newest-first),
+        provider acceptance (empty box total=0).
   - [ ] **#4 (separate branch) Notifications** — ESL `MESSAGE_WAITING` → webhook
         (Telegram/email) on new voicemail; extends the events listener.
 

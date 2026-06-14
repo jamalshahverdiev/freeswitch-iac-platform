@@ -83,6 +83,9 @@ req POST /api/v1/users '{"domain":"demo.test","number":"3003","voicemail":{"enab
 check "voicemail bad email -> 400" 400 "$CODE"
 req GET  /api/v1/users/demo.test/3002
 check "get user with voicemail -> 200" 200 "$CODE"; contains "vm email kept" '"email":"vm@demo.test"'
+# read API (freeswitch_core): empty mailbox still returns the box shape + MWI counters
+req GET  /api/v1/voicemail/demo.test/3001
+check "voicemail read -> 200" 200 "$CODE"; contains "mailbox has counters" '"unread":'; contains "mailbox messages array" '"messages":'
 
 echo "== gateways CRUD =="
 req POST /api/v1/gateways '{"name":"test-trunk","profile":"external","proxy":"sip.example.com","username":"u","password":"s","register":true}'

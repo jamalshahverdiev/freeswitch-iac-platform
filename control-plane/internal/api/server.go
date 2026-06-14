@@ -30,6 +30,7 @@ type Server struct {
 	recUser      string
 	recPass      string
 	hub          *events.Hub
+	vmStore      *store.VoicemailStore
 	provUser     string
 	provPass     string
 	provAllow    []*net.IPNet
@@ -56,6 +57,8 @@ type Options struct {
 	RecPassword string
 	// Hub streams telephony events to GET /api/v1/events (SSE). May be nil.
 	Hub *events.Hub
+	// VoicemailStore reads freeswitch_core for the voicemail API. nil → 503.
+	VoicemailStore *store.VoicemailStore
 	// Phone provisioning (GET /provision/*): Basic auth + CIDR allowlist guard,
 	// and the SIP server/port phones register to.
 	ProvisionUser       string
@@ -80,6 +83,7 @@ func NewServer(st *store.Store, au *audit.Recorder, esl *runtime.Client, opts Op
 		recUser:       opts.RecUser,
 		recPass:       opts.RecPassword,
 		hub:           opts.Hub,
+		vmStore:       opts.VoicemailStore,
 		provUser:      opts.ProvisionUser,
 		provPass:      opts.ProvisionPassword,
 		provSIPServer: opts.ProvisionSIPServer,
@@ -153,6 +157,8 @@ func (s *Server) Router() http.Handler {
 		r.Get("/users/{domain}/{number}", s.handleGetUser)
 		r.Put("/users/{domain}/{number}", s.handleUpdateUser)
 		r.Delete("/users/{domain}/{number}", s.handleDeleteUser)
+
+		r.Get("/voicemail/{domain}/{number}", s.handleGetVoicemail)
 
 		r.Post("/gateways", s.handleCreateGateway)
 		r.Get("/gateways", s.handleListGateways)

@@ -423,9 +423,22 @@ curl -N --cacert deploy/tls/ca.crt -H "Authorization: Bearer $TOKEN" \
 Event types: `call.started` / `call.answered` / `call.ended`, `agent.status`
 (call-center agent), `queue.member` (queue join/leave/offer), `conference`
 (member add/del). Each is `{type, ts, data{...}}`. A `: ping` heartbeat is sent
-every 25 s; browsers can consume it directly with `EventSource`. Returns 503 if
-the event stream is not enabled (ESL not configured). This is the foundation
-for the supervisor wallboard and voicemail notifications.
+every 25 s. Returns 503 if the event stream is not enabled (ESL not
+configured).
+
+> Browser note: `EventSource` cannot send an `Authorization` header, so a
+> browser client (see the wallboard below) reads this stream with `fetch()` +
+> a streaming body reader instead.
+
+## Supervisor wallboard
+
+`GET /wallboard` serves a self-contained live dashboard (static HTML, embedded
+in the binary, **no auth on the page itself**). The operator pastes the API
+token once (kept in `sessionStorage`); the page then opens the SSE stream
+same-origin and shows, in real time: active calls, queue-waiting count, agent
+statuses, calls-since-open and a rolling event log. It is event-driven —
+it reflects activity from the moment it is opened (seeding current in-progress
+calls on load is a future enhancement). Open `https://<control-plane>/wallboard`.
 
 ## Call detail records (CDR)
 

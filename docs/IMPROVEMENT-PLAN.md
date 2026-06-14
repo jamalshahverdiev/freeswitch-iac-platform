@@ -221,11 +221,15 @@ Verified: grafana_ro reads all 3 DBs / write denied; Grafana :3000 up, 3 datasou
          fan-out + slow-consumer drop, SSE handler via httptest (subscribe,
          inject event, read one frame). + manual curl stream vs live box.
       6. docs/api.md events section; note it's the base for wallboard/voicemail.
-- [ ] **Supervisor wallboard** — a small static page (like webphone) or a
-      control-plane HTML route that consumes `/api/v1/events` (Phase 6 #1) and
-      shows queue depth, agent states, current calls, wait times in real time.
-      Serve from compose (or reuse the webphone nginx). Demo-friendlier than
-      Grafana because it is push/live and call-center focused.
+- [x] **Supervisor wallboard** — DONE 2026-06-14 (branch `wallboard`). Served
+      BY the control-plane at GET /wallboard (static HTML via go:embed, no auth
+      on the page; same-origin so the SSE fetch needs no CORS). Operator pastes
+      the token (sessionStorage); page reads /api/v1/events via fetch()+stream
+      reader (EventSource can't set Authorization). Live tiles: active calls,
+      queue waiting, agents online, calls-since-open + agents table + event log.
+      Event-driven (reflects activity since open; seeding in-progress calls on
+      load = future). Verified: served 200, and a real call produced 6 events on
+      the same stream the page consumes. Handler test added.
 - [ ] **Time-based routing** — FreeSWITCH dialplan conditions support time
       fields (`wday`, `time-of-day`, `mday`, `date-time`). Extend the dialplan
       renderer + `freeswitch_dialplan_extension` condition schema with optional

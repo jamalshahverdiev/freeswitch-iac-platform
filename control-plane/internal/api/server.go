@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/audit"
+	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/events"
 	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/runtime"
 	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/store"
 	"github.com/go-chi/chi/v5"
@@ -27,6 +28,7 @@ type Server struct {
 	recURL       string
 	recUser      string
 	recPass      string
+	hub          *events.Hub
 	log          *slog.Logger
 }
 
@@ -44,6 +46,8 @@ type Options struct {
 	RecURL      string
 	RecUser     string
 	RecPassword string
+	// Hub streams telephony events to GET /api/v1/events (SSE). May be nil.
+	Hub *events.Hub
 }
 
 func NewServer(st *store.Store, au *audit.Recorder, esl *runtime.Client, opts Options, log *slog.Logger) *Server {
@@ -59,6 +63,7 @@ func NewServer(st *store.Store, au *audit.Recorder, esl *runtime.Client, opts Op
 		recURL:       opts.RecURL,
 		recUser:      opts.RecUser,
 		recPass:      opts.RecPassword,
+		hub:          opts.Hub,
 		log:          log,
 	}
 	for _, c := range opts.XMLAllowCIDRs {
@@ -155,6 +160,8 @@ func (s *Server) Router() http.Handler {
 
 		r.Get("/cdr", s.handleListCDR)
 		r.Get("/cdr/stats", s.handleCDRStats)
+
+		r.Get("/events", s.handleEvents)
 
 		r.Post("/runtime/reloadxml", s.handleReloadXML)
 		r.Get("/runtime/health", s.handleRuntimeHealth)
@@ -256,6 +263,15 @@ type statusWriter struct {
 func (w *statusWriter) WriteHeader(code int) {
 	w.status = code
 	w.ResponseWriter.WriteHeader(code)
+}
+
+// Flush forwards to the underlying writer so SSE (/api/v1/events) keeps working
+// through the logging middleware — embedding ResponseWriter does not promote
+// the Flusher interface on its own.
+func (w *statusWriter) Flush() {
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
 }
 
 // --- response helpers ---

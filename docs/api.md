@@ -402,6 +402,31 @@ hash); `vm-password` (voicemail PIN) is still emitted as-is.
 
 ---
 
+## Live events (SSE)
+
+`GET /api/v1/events` is a **Server-Sent Events** stream (Bearer token) of live
+telephony events. A single persistent ESL listener in the control-plane
+subscribes to FreeSWITCH and fans events out to all connected clients via an
+in-process hub (no polling, no external broker — single-instance; a shared
+broker like Redis pub/sub would be needed only if the control-plane is scaled
+to multiple replicas).
+
+```bash
+curl -N --cacert deploy/tls/ca.crt -H "Authorization: Bearer $TOKEN" \
+     https://localhost:8080/api/v1/events
+# event: call.started
+# data: {"type":"call.started","ts":1781433467,"data":{"uuid":"...","direction":"inbound","caller":"4201","destination":"4444"}}
+# event: call.answered
+# event: call.ended  data:{... "cause":"NORMAL_CLEARING","billsec":"42"}
+```
+
+Event types: `call.started` / `call.answered` / `call.ended`, `agent.status`
+(call-center agent), `queue.member` (queue join/leave/offer), `conference`
+(member add/del). Each is `{type, ts, data{...}}`. A `: ping` heartbeat is sent
+every 25 s; browsers can consume it directly with `EventSource`. Returns 503 if
+the event stream is not enabled (ESL not configured). This is the foundation
+for the supervisor wallboard and voicemail notifications.
+
 ## Call detail records (CDR)
 
 FreeSWITCH `mod_json_cdr` POSTs each call's CDR (JSON) to **`POST /cdr`**, which

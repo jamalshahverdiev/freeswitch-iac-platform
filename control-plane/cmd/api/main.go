@@ -16,6 +16,7 @@ import (
 	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/audit"
 	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/config"
 	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/db"
+	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/events"
 	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/runtime"
 	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/store"
 )
@@ -48,6 +49,15 @@ func main() {
 	au := audit.New(pool)
 	esl := runtime.New(cfg.ESLAddr, cfg.ESLPassword, cfg.ESLTimeout)
 
+	// Live event stream: a persistent ESL listener feeds an in-process hub that
+	// GET /api/v1/events (SSE) fans out. Runs only when ESL is configured.
+	hub := events.NewHub()
+	listenerCtx, stopListener := context.WithCancel(ctx)
+	defer stopListener()
+	if cfg.ESLAddr != "" {
+		go events.NewListener(cfg.ESLAddr, cfg.ESLPassword, hub, log).Run(listenerCtx)
+	}
+
 	tlsEnabled := cfg.TLSCertFile != "" && cfg.TLSKeyFile != ""
 	mtls := tlsEnabled && cfg.XMLClientCAFile != ""
 
@@ -61,6 +71,7 @@ func main() {
 		RecURL:               cfg.RecURL,
 		RecUser:              cfg.RecUser,
 		RecPassword:          cfg.RecPassword,
+		Hub:                  hub,
 	}, log)
 
 	httpServer := &http.Server{
@@ -108,6 +119,7 @@ func main() {
 	<-stop
 
 	log.Info("shutting down")
+	stopListener() // stop the ESL event listener
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {

@@ -258,12 +258,30 @@ Verified: grafana_ro reads all 3 DBs / write denied; Grafana :3000 up, 3 datasou
       runs `tofu plan` on PR and posts the diff as a comment, `tofu apply` on
       merge to main. This realizes the original design-doc dream end to end.
       Needs: remote state backend + provider creds as repo secrets.
-- [ ] **Voicemail integration** — mod_voicemail already stores in
-      freeswitch_core via ODBC. Wire mailbox params into `freeswitch_user`
-      (vm-password already passes through; add enable/greeting/email options),
-      drop voicemail recordings into the dated tree, and add an optional
-      notification (control-plane webhook → Telegram/email) on new voicemail
-      via an ESL `MESSAGE_WAITING` / vm event subscription (ties into Phase 6 #1).
+- **Voicemail integration** — mod_voicemail stores messages in freeswitch_core
+      via ODBC. Staged:
+  - [x] **#1 Declarative mailbox** — typed `voicemail{enabled,password,email,
+        attach_file,email_all}` on `freeswitch_user` (migration 000007, nullable
+        `voicemail` JSONB). Rendered into the directory as vm-* params (typed
+        overrides freeform vm-* keys); `voicemail.password` redacted in audit &
+        never in directory XML. Provider: nested `voicemail = {}` block on the
+        user resource + data source. Verified: api-test 134, renderer/handler
+        unit tests, provider acceptance (create+import+update+datasource), live
+        directory render shows vm-enabled/vm-mailto.
+  - [x] **#2 voicemail.conf via xml_curl** — control-plane renders a `default`
+        profile through `/xml/configuration` (key_value=voicemail.conf), odbc-dsn
+        from `VM_ODBC_DSN` (→ freeswitch_core). Parity with callcenter/conference:
+        the configuration binding stays off on the live FS by choice, on-disk
+        remains authoritative. Verified: renderer tests + api-test 136.
+  - [x] **#3 Read API** — `GET /api/v1/voicemail/{domain}/{number}` returns the
+        mailbox (messages newest-first + total/unread MWI counters) from a
+        SEPARATE read-only `freeswitch_core` pool (`CORE_DATABASE_URL`; nil→503).
+        Reads `voicemail_msgs` (unread = read_epoch==0), never writes. Provider
+        data source `freeswitch_voicemail`. Verified: handler 503 test, api-test
+        139, live read of synthetic rows (total=2/unread=1, newest-first),
+        provider acceptance (empty box total=0).
+  - [ ] **#4 (separate branch) Notifications** — ESL `MESSAGE_WAITING` → webhook
+        (Telegram/email) on new voicemail; extends the events listener.
 
 ## Phase 7 — Publish the provider to the Terraform Registry
 

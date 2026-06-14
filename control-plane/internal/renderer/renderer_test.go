@@ -67,6 +67,58 @@ func TestRenderDirectoryA1Hash(t *testing.T) {
 	}
 }
 
+func TestRenderDirectoryVoicemail(t *testing.T) {
+	out := must(t)(RenderDirectory([]models.DomainWithUsers{{
+		Domain: models.Domain{Name: "lab.test"},
+		Users: []models.User{{
+			Number: "1002",
+			Params: map[string]string{"password": "s3cret", "vm-password": "stale"},
+			Voicemail: &models.Voicemail{
+				Enabled: true, Password: "1234", Email: "a@b.com",
+				AttachFile: true, EmailAll: false,
+			},
+		}},
+	}}))
+
+	wantContains(t, out,
+		`<param name="vm-enabled" value="true">`,
+		// typed password wins over the freeform vm-password key
+		`<param name="vm-password" value="1234">`,
+		`<param name="vm-mailto" value="a@b.com">`,
+		`<param name="vm-attach-file" value="true">`,
+		`<param name="vm-email-all-messages" value="false">`,
+	)
+	// the stale freeform vm-password must not survive
+	wantNotContains(t, out, `value="stale"`)
+}
+
+func TestRenderDirectoryNoVoicemail(t *testing.T) {
+	out := must(t)(RenderDirectory([]models.DomainWithUsers{{
+		Domain: models.Domain{Name: "lab.test"},
+		Users:  []models.User{{Number: "1003", Params: map[string]string{"password": "x"}}},
+	}}))
+	// nil mailbox renders no vm-* params at all
+	wantNotContains(t, out, "vm-enabled", "vm-mailto", "vm-attach-file")
+}
+
+func TestRenderVoicemail(t *testing.T) {
+	out := must(t)(RenderVoicemail("freeswitch-core:fs:pw"))
+	wantContains(t, out,
+		`<configuration name="voicemail.conf"`,
+		`<profile name="default">`,
+		`<param name="odbc-dsn" value="freeswitch-core:fs:pw">`,
+		`<param name="file-extension" value="wav">`,
+		`<email>`,
+		`<param name="email-from" value="${voicemail_account}@${voicemail_domain}">`,
+	)
+}
+
+func TestRenderVoicemailNoDSN(t *testing.T) {
+	out := must(t)(RenderVoicemail(""))
+	// empty DSN omits the param entirely (no odbc-dsn line)
+	wantNotContains(t, out, "odbc-dsn")
+}
+
 // ---------- dialplan ----------
 
 func dpExt(name, context string, prio int, enabled bool) models.DialplanExtension {

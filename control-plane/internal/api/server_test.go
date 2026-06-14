@@ -121,6 +121,7 @@ func TestValidationRejectsBeforeStore(t *testing.T) {
 		{"cc tier without agent", http.MethodPost, "/api/v1/callcenter/tiers", `{"queue":"q@d"}`},
 		{"conf profile without name", http.MethodPost, "/api/v1/conference/profiles", `{"video_mode":"mux"}`},
 		{"conf room missing profile", http.MethodPost, "/api/v1/conference/rooms", `{"name":"r","number":"1","domain":"d","context":"c"}`},
+		{"user voicemail bad email", http.MethodPost, "/api/v1/users", `{"domain":"d","number":"1","voicemail":{"enabled":true,"email":"not-an-email"}}`},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -218,6 +219,14 @@ func TestEventsDisabledWithoutHub(t *testing.T) {
 	rec := do(t, h, http.MethodGet, "/api/v1/events", "test-token", "")
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("got %d want 503 when hub is nil", rec.Code)
+	}
+}
+
+func TestVoicemailRequiresCorePool(t *testing.T) {
+	h := testServer(t, Options{}) // no VoicemailStore
+	rec := do(t, h, http.MethodGet, "/api/v1/voicemail/demo.test/3001", "test-token", "")
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("got %d want 503 when core pool is nil", rec.Code)
 	}
 }
 

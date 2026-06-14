@@ -10,7 +10,10 @@ import (
 type Config struct {
 	HTTPAddr    string
 	DatabaseURL string
-	APIToken    string
+	// CoreDatabaseURL points at freeswitch_core (mod_voicemail's message store).
+	// Read-only use. Empty disables the voicemail read API (endpoint → 503).
+	CoreDatabaseURL string
+	APIToken        string
 	ESLAddr     string
 	ESLPassword string
 	ESLTimeout  time.Duration
@@ -30,6 +33,9 @@ type Config struct {
 	// CCOdbcDSN ("dsn:user:pass") is emitted into the rendered callcenter.conf
 	// so mod_callcenter keeps its runtime tables in PostgreSQL, not sqlite.
 	CCOdbcDSN string
+	// VMOdbcDSN ("dsn:user:pass") is emitted into the rendered voicemail.conf so
+	// mod_voicemail stores messages in PostgreSQL (freeswitch_core).
+	VMOdbcDSN string
 	// Recordings file server on the FS host (nginx) proxied by /api/v1/recordings.
 	RecURL      string
 	RecUser     string
@@ -45,9 +51,10 @@ type Config struct {
 
 func Load() (Config, error) {
 	cfg := Config{
-		HTTPAddr:      env("HTTP_ADDR", ":8080"),
-		DatabaseURL:   env("DATABASE_URL", ""),
-		APIToken:      env("API_TOKEN", "dev-token"),
+		HTTPAddr:        env("HTTP_ADDR", ":8080"),
+		DatabaseURL:     env("DATABASE_URL", ""),
+		CoreDatabaseURL: env("CORE_DATABASE_URL", ""),
+		APIToken:        env("API_TOKEN", "dev-token"),
 		ESLAddr:       env("ESL_ADDR", ""),
 		ESLPassword:   env("ESL_PASSWORD", "ClueCon"),
 		ESLTimeout:    5 * time.Second,
@@ -58,6 +65,7 @@ func Load() (Config, error) {
 		TLSKeyFile:      env("TLS_KEY_FILE", ""),
 		XMLClientCAFile: env("XML_CLIENT_CA_FILE", ""),
 		CCOdbcDSN:       env("CC_ODBC_DSN", ""),
+		VMOdbcDSN:       env("VM_ODBC_DSN", "freeswitch-core:freeswitch:freeswitch"),
 		RecURL:          env("REC_URL", ""),
 		RecUser:         env("REC_USER", "recordings"),
 		RecPassword:     env("REC_PASSWORD", ""),

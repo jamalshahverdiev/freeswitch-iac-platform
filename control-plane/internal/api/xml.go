@@ -131,11 +131,23 @@ func (s *Server) handleXMLConfiguration(w http.ResponseWriter, r *http.Request) 
 		s.serveCallcenterConf(w, r)
 	case "conference.conf":
 		s.serveConferenceConf(w, r)
+	case "voicemail.conf":
+		s.serveVoicemailConf(w, r)
 	default:
 		// Everything else (including sofia.conf — gateways stay on disk until
 		// the gateways milestone) falls back to FreeSWITCH's files.
 		s.writeXML(w, []byte(renderer.NotFoundDocument))
 	}
+}
+
+func (s *Server) serveVoicemailConf(w http.ResponseWriter, r *http.Request) {
+	body, err := renderer.RenderVoicemail(s.vmOdbcDSN)
+	if err != nil {
+		s.log.Error("voicemail render", "err", err)
+		s.xmlError(w)
+		return
+	}
+	s.writeXML(w, body)
 }
 
 func (s *Server) serveConferenceConf(w http.ResponseWriter, r *http.Request) {

@@ -60,7 +60,7 @@ func RenderDirectory(domains []models.DomainWithUsers) ([]byte, error) {
 		for _, u := range dw.Users {
 			dd.Groups.Group.Users = append(dd.Groups.Group.Users, dirUser{
 				ID:        u.Number,
-				Params:    directoryUserParams(u.Number, dw.Domain.Name, u.Params),
+				Params:    directoryUserParams(u.Number, dw.Domain.Name, u.Params, u.Voicemail),
 				Variables: sortedParams(u.Variables),
 			})
 		}
@@ -73,7 +73,10 @@ func RenderDirectory(domains []models.DomainWithUsers) ([]byte, error) {
 // plaintext "password" with an "a1-hash" = MD5(user:realm:password) so the
 // SIP secret never appears in the /xml/directory response. realm is the domain
 // the user authenticates in. Other params (e.g. vm-password) pass through.
-func directoryUserParams(number, domain string, in map[string]string) []param {
+//
+// A typed Voicemail, if present, is expanded into vm-* params last so it takes
+// precedence over any matching freeform keys in `in`.
+func directoryUserParams(number, domain string, in map[string]string, vm *models.Voicemail) []param {
 	out := make(map[string]string, len(in))
 	for k, v := range in {
 		if k == "password" {
@@ -82,7 +85,37 @@ func directoryUserParams(number, domain string, in map[string]string) []param {
 		}
 		out[k] = v
 	}
+	for k, v := range voicemailParams(vm) {
+		out[k] = v
+	}
 	return sortedParams(out)
+}
+
+// voicemailParams maps a typed mailbox to mod_voicemail directory params.
+// Returns nil when no mailbox is configured.
+func voicemailParams(vm *models.Voicemail) map[string]string {
+	if vm == nil {
+		return nil
+	}
+	out := map[string]string{
+		"vm-enabled":            boolStr(vm.Enabled),
+		"vm-attach-file":        boolStr(vm.AttachFile),
+		"vm-email-all-messages": boolStr(vm.EmailAll),
+	}
+	if vm.Password != "" {
+		out["vm-password"] = vm.Password
+	}
+	if vm.Email != "" {
+		out["vm-mailto"] = vm.Email
+	}
+	return out
+}
+
+func boolStr(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
 }
 
 func a1Hash(user, realm, password string) string {

@@ -38,6 +38,8 @@ services:
       context: ./control-plane
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-freeswitch}:${POSTGRES_PASSWORD:-freeswitch}@postgres:5432/${POSTGRES_DB:-freeswitch_control}?sslmode=disable
+      # Read-only access to freeswitch_core for the voicemail read API (MWI + list).
+      CORE_DATABASE_URL: postgres://${POSTGRES_USER:-freeswitch}:${POSTGRES_PASSWORD:-freeswitch}@postgres:5432/freeswitch_core?sslmode=disable
       API_TOKEN: ${API_TOKEN:-dev-token}
       HTTP_ADDR: ":8080"
       ESL_ADDR: ${ESL_ADDR:-192.168.48.143:8021}
@@ -55,6 +57,9 @@ services:
       # mod_callcenter runtime tables go to PostgreSQL via this ODBC DSN
       # (matches the [freeswitch] DSN configured on the FS server).
       CC_ODBC_DSN: ${CC_ODBC_DSN:-freeswitch:freeswitch:freeswitch}
+      # mod_voicemail message store DSN, emitted into the rendered voicemail.conf
+      # (matches the [freeswitch-core] DSN configured on the FS server).
+      VM_ODBC_DSN: ${VM_ODBC_DSN:-freeswitch-core:freeswitch:freeswitch}
       # Recordings file server on the FS host (nginx :8088, basic auth) that
       # GET /api/v1/recordings proxies (list + download).
       REC_URL: ${REC_URL:-http://192.168.48.143:8088}

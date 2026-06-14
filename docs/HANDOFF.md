@@ -209,8 +209,15 @@ grep "done playing file" /var/log/freeswitch/freeswitch.log
   mTLS (client cert) + Basic auth (+ optional XML_ALLOW_CIDRS) + not-found
   fallback; directory sends `a1-hash` not plaintext password (REGISTER 200/403
   verified); ESL non-default password + ACL; audit redacts passwords.
-- `deploy/api-test.sh` = 126/126 over HTTPS+mTLS (latest: adds CDR, SSE events,
-  wallboard, time-based routing, phone provisioning).
+- `deploy/api-test.sh` = 139/139 over HTTPS+mTLS (latest: adds CDR, SSE events,
+  wallboard, time-based routing, phone provisioning, voicemail).
+- **Voicemail DONE (3 parts):** (1) typed `voicemail{}` block on `freeswitch_user`
+  → vm-* directory params (migration 000007); (2) `voicemail.conf` rendered via
+  `/xml/configuration` (odbc-dsn from `VM_ODBC_DSN`→freeswitch_core); (3) read API
+  `GET /api/v1/voicemail/{domain}/{number}` (messages + MWI) over a separate
+  read-only `freeswitch_core` pool (`CORE_DATABASE_URL`). Provider: user voicemail
+  block + data sources `freeswitch_user.voicemail` and `freeswitch_voicemail`.
+  Pending follow-up branch: MWI push notifications (ESL MESSAGE_WAITING→webhook).
 - **Phone provisioning DONE:** `provisioned_devices` (migration 000006) + CRUD
   `/api/v1/devices` (bearer) + phone-facing `GET /provision/{file}` (Basic auth
   `PROVISION_USER/PASSWORD` + `PROVISION_ALLOW_CIDRS`). Renders Yealink `.cfg`,

@@ -19,8 +19,21 @@ type User struct {
 	Enabled   bool              `json:"enabled"`
 	Params    map[string]string `json:"params"`
 	Variables map[string]string `json:"variables"`
-	CreatedAt time.Time         `json:"created_at"`
-	UpdatedAt time.Time         `json:"updated_at"`
+	// Voicemail is the typed mailbox config. nil = no voicemail configured
+	// (nothing rendered); a non-nil value renders vm-* directory params.
+	Voicemail *Voicemail `json:"voicemail,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+}
+
+// Voicemail is a user's mod_voicemail mailbox, rendered into the directory as
+// vm-* params. It is the typed alternative to setting vm-* keys in Params.
+type Voicemail struct {
+	Enabled    bool   `json:"enabled"`
+	Password   string `json:"password,omitempty"`
+	Email      string `json:"email,omitempty"`
+	AttachFile bool   `json:"attach_file"`
+	EmailAll   bool   `json:"email_all"`
 }
 
 type Gateway struct {
@@ -63,6 +76,28 @@ type DialplanExtension struct {
 	Conditions []DialplanCondition `json:"conditions"`
 	CreatedAt  time.Time           `json:"created_at"`
 	UpdatedAt  time.Time           `json:"updated_at"`
+}
+
+// VoicemailMessage is one stored message read from freeswitch_core
+// (mod_voicemail's voicemail_msgs table). Read-only.
+type VoicemailMessage struct {
+	UUID         string `json:"uuid"`
+	Folder       string `json:"folder"`
+	CIDName      string `json:"cid_name"`
+	CIDNumber    string `json:"cid_number"`
+	CreatedEpoch int64  `json:"created_epoch"`
+	ReadEpoch    int64  `json:"read_epoch"`
+	MessageLen   int    `json:"message_len"` // seconds
+	Read         bool   `json:"read"`
+}
+
+// VoicemailBox is a user's mailbox contents plus the MWI counters.
+type VoicemailBox struct {
+	Domain   string             `json:"domain"`
+	Number   string             `json:"number"`
+	Total    int                `json:"total"`
+	Unread   int                `json:"unread"`
+	Messages []VoicemailMessage `json:"messages"`
 }
 
 // DomainWithUsers is the aggregate used by the directory renderer.

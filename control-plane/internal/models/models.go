@@ -44,9 +44,13 @@ type DialplanAction struct {
 }
 
 type DialplanCondition struct {
-	Field      string           `json:"field"`
-	Expression string           `json:"expression"`
-	Actions    []DialplanAction `json:"actions"`
+	Field      string `json:"field"`
+	Expression string `json:"expression"`
+	// TimeAttrs are FreeSWITCH time-of-day condition attributes, e.g.
+	// {"wday":"2-6","hour":"9-17"}. A condition may be a pure time gate (time
+	// attrs with empty field/expression) or combine a regex with a time window.
+	TimeAttrs map[string]string `json:"time,omitempty"`
+	Actions   []DialplanAction  `json:"actions"`
 }
 
 type DialplanExtension struct {

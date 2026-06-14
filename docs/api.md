@@ -177,6 +177,25 @@ required. The `id` is a UUID returned on create (used for get/update/delete).
 
 ---
 
+### Time-based routing
+
+A condition may carry FreeSWITCH time-of-day attributes via a `time` object
+(in addition to, or instead of, `field`/`expression`):
+
+```json
+{"field":"destination_number","expression":"^(4444)$",
+ "time":{"wday":"2-6","hour":"9-17"},
+ "actions":[{"application":"transfer","data":"support@192.168.48.143"}]}
+```
+
+Supported keys: `wday` (1=Sun..7=Sat), `mday`, `mon`, `mweek`, `week`, `hour`,
+`minute`, `time-of-day`, `date-time`. A condition with `time` and no
+`field`/`expression` is a pure time gate. Day/night routing = two extensions on
+the same number ordered by priority: the higher one carries the time window;
+when it's outside that window the condition fails and the call falls through to
+the lower "closed" extension. Validation rejects a condition that has neither a
+regex nor time attributes (400). Worked example: `examples/time-routing/`.
+
 ## Building an IVR (menus + submenu)
 
 An IVR is just dialplan data — no special resource. The pattern:

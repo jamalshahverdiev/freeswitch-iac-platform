@@ -230,12 +230,15 @@ Verified: grafana_ro reads all 3 DBs / write denied; Grafana :3000 up, 3 datasou
       Event-driven (reflects activity since open; seeding in-progress calls on
       load = future). Verified: served 200, and a real call produced 6 events on
       the same stream the page consumes. Handler test added.
-- [ ] **Time-based routing** — FreeSWITCH dialplan conditions support time
-      fields (`wday`, `time-of-day`, `mday`, `date-time`). Extend the dialplan
-      renderer + `freeswitch_dialplan_extension` condition schema with optional
-      time attributes, then add a `freeswitch_schedule`-style helper/example:
-      business hours → queue 4444, off-hours → an IVR "call back later". Keep it
-      pure dialplan (no new runtime moving parts).
+- [x] **Time-based routing** — DONE 2026-06-14 (branches `time-routing` in both
+      repos). Condition gained optional FreeSWITCH time attrs (wday/hour/
+      time-of-day/date-time/...) stored as JSONB (migration 000005); renderer
+      emits them + omits empty field/expression so a pure time gate is valid;
+      validation requires regex and/or time. Provider: condition `time` map,
+      field/expression now Optional. examples/time-routing (6000: business
+      hours→queue, else TTS "office closed"). Live-verified on a Sunday:
+      Date/TimeMatch (FAIL) on wday=2-6 → falls through to the closed branch.
+      FS wday numbering: 1=Sun..7=Sat (confirmed empirically). api-test 109.
 - [ ] **Phone provisioning** — `GET /provision/{mac}.xml` (or .cfg) endpoint
       rendering vendor device configs from a new `provisioned_devices` table
       (mac → user/line/server/codecs). Templates per vendor (Yealink,

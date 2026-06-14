@@ -29,9 +29,46 @@ type dpExtension struct {
 }
 
 type dpCondition struct {
-	Field      string     `xml:"field,attr"`
-	Expression string     `xml:"expression,attr"`
-	Actions    []dpAction `xml:"action"`
+	Field      string `xml:"field,attr,omitempty"`
+	Expression string `xml:"expression,attr,omitempty"`
+	// FreeSWITCH time-of-day attributes (emitted only when set).
+	Wday      string     `xml:"wday,attr,omitempty"`
+	Mday      string     `xml:"mday,attr,omitempty"`
+	Mon       string     `xml:"mon,attr,omitempty"`
+	Mweek     string     `xml:"mweek,attr,omitempty"`
+	Week      string     `xml:"week,attr,omitempty"`
+	Hour      string     `xml:"hour,attr,omitempty"`
+	Minute    string     `xml:"minute,attr,omitempty"`
+	TimeOfDay string     `xml:"time-of-day,attr,omitempty"`
+	DateTime  string     `xml:"date-time,attr,omitempty"`
+	Actions   []dpAction `xml:"action"`
+}
+
+// applyTimeAttrs copies supported FreeSWITCH time attributes onto the
+// condition. Unknown keys are ignored (never reach the XML).
+func applyTimeAttrs(c *dpCondition, attrs map[string]string) {
+	for k, v := range attrs {
+		switch k {
+		case "wday":
+			c.Wday = v
+		case "mday":
+			c.Mday = v
+		case "mon":
+			c.Mon = v
+		case "mweek":
+			c.Mweek = v
+		case "week":
+			c.Week = v
+		case "hour":
+			c.Hour = v
+		case "minute":
+			c.Minute = v
+		case "time-of-day":
+			c.TimeOfDay = v
+		case "date-time":
+			c.DateTime = v
+		}
+	}
 }
 
 type dpAction struct {
@@ -53,6 +90,7 @@ func RenderDialplan(exts []models.DialplanExtension, contextFilter string) ([]by
 		ext := dpExtension{Name: e.Name}
 		for _, c := range e.Conditions {
 			cond := dpCondition{Field: c.Field, Expression: c.Expression}
+			applyTimeAttrs(&cond, c.TimeAttrs)
 			for _, a := range c.Actions {
 				cond.Actions = append(cond.Actions, dpAction{Application: a.Application, Data: a.Data})
 			}

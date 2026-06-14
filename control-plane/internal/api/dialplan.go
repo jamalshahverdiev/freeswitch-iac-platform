@@ -19,11 +19,19 @@ func validateExtension(e *models.DialplanExtension) (string, bool) {
 		return "at least one condition is required", false
 	}
 	for _, c := range e.Conditions {
-		if c.Field == "" || c.Expression == "" {
-			return "condition field and expression are required", false
+		// A condition needs either a regex (field+expression) or time attrs
+		// (a pure time gate), or both.
+		hasRegex := c.Field != "" && c.Expression != ""
+		if !hasRegex && len(c.TimeAttrs) == 0 {
+			return "condition needs field+expression and/or time attributes", false
 		}
-		if _, err := regexp.Compile(c.Expression); err != nil {
-			return "condition expression is not a valid regex: " + c.Expression, false
+		if c.Field != "" && c.Expression == "" || c.Field == "" && c.Expression != "" {
+			return "condition field and expression must be set together", false
+		}
+		if c.Expression != "" {
+			if _, err := regexp.Compile(c.Expression); err != nil {
+				return "condition expression is not a valid regex: " + c.Expression, false
+			}
 		}
 		if len(c.Actions) == 0 {
 			return "each condition requires at least one action", false

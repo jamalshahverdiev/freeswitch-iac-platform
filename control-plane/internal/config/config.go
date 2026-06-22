@@ -47,6 +47,11 @@ type Config struct {
 	ProvisionAllowCIDRs []string
 	ProvisionSIPServer  string // host phones register to; defaults to the device domain
 	ProvisionSIPPort    string
+	// Voicemail MWI notifications (push on new voicemail). Any sink set → enabled.
+	VMNotifyWebhookURL    string
+	VMNotifyWebhookHeader string // optional extra header, "Key: Value"
+	VMNotifyTelegramToken string
+	VMNotifyTelegramChat  string
 }
 
 func Load() (Config, error) {
@@ -74,6 +79,10 @@ func Load() (Config, error) {
 		ProvisionAllowCIDRs: splitCSV(env("PROVISION_ALLOW_CIDRS", "")),
 		ProvisionSIPServer:  env("PROVISION_SIP_SERVER", ""),
 		ProvisionSIPPort:    env("PROVISION_SIP_PORT", "5060"),
+		VMNotifyWebhookURL:    env("VM_NOTIFY_WEBHOOK_URL", ""),
+		VMNotifyWebhookHeader: env("VM_NOTIFY_WEBHOOK_HEADER", ""),
+		VMNotifyTelegramToken: env("VM_NOTIFY_TELEGRAM_TOKEN", ""),
+		VMNotifyTelegramChat:  env("VM_NOTIFY_TELEGRAM_CHAT_ID", ""),
 	}
 	if cfg.DatabaseURL == "" {
 		return cfg, fmt.Errorf("DATABASE_URL is required")

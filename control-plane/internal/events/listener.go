@@ -14,8 +14,9 @@ import (
 )
 
 // eslEvents is the event subscription sent to FreeSWITCH after auth.
+// MESSAGE_WAITING carries MWI (voicemail) state changes.
 const eslEvents = "CHANNEL_CREATE CHANNEL_ANSWER CHANNEL_HANGUP_COMPLETE " +
-	"CUSTOM callcenter::info conference::maintenance"
+	"MESSAGE_WAITING CUSTOM callcenter::info conference::maintenance"
 
 // Listener is a persistent ESL inbound client that subscribes to telephony
 // events and publishes normalized Events to the Hub. It reconnects on failure.
@@ -180,6 +181,15 @@ func normalize(m map[string]string) (Event, bool) {
 			"uuid", uuid, "cause", m["Hangup-Cause"],
 			"duration", m["variable_duration"], "billsec", m["variable_billsec"],
 		)}, true
+	case "MESSAGE_WAITING":
+		acct := strings.TrimPrefix(m["MWI-Message-Account"], "sip:")
+		user, domain := splitAccount(acct)
+		newC, savedC := parseVoiceMessage(m["MWI-Voice-Message"])
+		return Event{Type: "voicemail.mwi", Data: d(
+			"account", acct, "user", user, "domain", domain,
+			"waiting", m["MWI-Messages-Waiting"],
+			"new", strconv.Itoa(newC), "saved", strconv.Itoa(savedC),
+		)}, true
 	case "CUSTOM":
 		switch m["Event-Subclass"] {
 		case "callcenter::info":
@@ -201,6 +211,30 @@ func normalize(m map[string]string) (Event, bool) {
 		}
 	}
 	return Event{}, false
+}
+
+// splitAccount splits "user@domain" into its parts (domain may be empty).
+func splitAccount(acct string) (user, domain string) {
+	if i := strings.Index(acct, "@"); i >= 0 {
+		return acct[:i], acct[i+1:]
+	}
+	return acct, ""
+}
+
+// parseVoiceMessage parses the MWI-Voice-Message header. Format is
+// "new/saved (urgent-new/urgent-saved)", e.g. "2/0 (0/0)". Missing/garbage → 0,0.
+func parseVoiceMessage(s string) (newC, savedC int) {
+	counts := s
+	if i := strings.Index(counts, "("); i >= 0 {
+		counts = counts[:i]
+	}
+	counts = strings.TrimSpace(counts)
+	parts := strings.SplitN(counts, "/", 2)
+	if len(parts) == 2 {
+		newC, _ = strconv.Atoi(strings.TrimSpace(parts[0]))
+		savedC, _ = strconv.Atoi(strings.TrimSpace(parts[1]))
+	}
+	return newC, savedC
 }
 
 func firstNonEmpty(vals ...string) string {

@@ -217,7 +217,11 @@ grep "done playing file" /var/log/freeswitch/freeswitch.log
   `GET /api/v1/voicemail/{domain}/{number}` (messages + MWI) over a separate
   read-only `freeswitch_core` pool (`CORE_DATABASE_URL`). Provider: user voicemail
   block + data sources `freeswitch_user.voicemail` and `freeswitch_voicemail`.
-  Pending follow-up branch: MWI push notifications (ESL MESSAGE_WAITING→webhook).
+- **Voicemail #4 MWI push notifications DONE** (branch `voicemail-mwi`): ESL
+  `MESSAGE_WAITING` → `voicemail.mwi` event (SSE + wallboard get it too); a
+  notifier pushes to a generic webhook (`VM_NOTIFY_WEBHOOK_URL`) and/or Telegram
+  on NEW-count increase (dedup). Live-verified via `voicemail_inject`. Control-
+  plane only (no provider/table). Voicemail feature now fully complete (#1–#4).
 - **Phone provisioning DONE:** `provisioned_devices` (migration 000006) + CRUD
   `/api/v1/devices` (bearer) + phone-facing `GET /provision/{file}` (Basic auth
   `PROVISION_USER/PASSWORD` + `PROVISION_ALLOW_CIDRS`). Renders Yealink `.cfg`,

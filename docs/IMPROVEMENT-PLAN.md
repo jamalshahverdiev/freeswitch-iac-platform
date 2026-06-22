@@ -280,8 +280,14 @@ Verified: grafana_ro reads all 3 DBs / write denied; Grafana :3000 up, 3 datasou
         data source `freeswitch_voicemail`. Verified: handler 503 test, api-test
         139, live read of synthetic rows (total=2/unread=1, newest-first),
         provider acceptance (empty box total=0).
-  - [ ] **#4 (separate branch) Notifications** — ESL `MESSAGE_WAITING` → webhook
-        (Telegram/email) on new voicemail; extends the events listener.
+  - [x] **#4 Notifications (MWI push)** — ESL listener subscribes `MESSAGE_WAITING`
+        → normalized `voicemail.mwi` event (also on SSE/wallboard). A notifier
+        (hub subscriber) fires only when a mailbox's NEW count *increases*
+        (dedup vs MWI refresh) to a generic webhook (`VM_NOTIFY_WEBHOOK_URL`,
+        optional header) and/or Telegram (`VM_NOTIFY_TELEGRAM_TOKEN`/`CHAT_ID`).
+        Global config, no new table/provider. Verified: unit (normalize +
+        notifier dedupe via httptest, -race) + LIVE end-to-end (`voicemail_inject`
+        on FS → webhook caught; new=1 then new=2, one notification each).
 
 ## Phase 7 — Publish the provider to the Terraform Registry
 

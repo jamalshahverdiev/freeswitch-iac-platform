@@ -22,6 +22,25 @@ func TestParseEventBlock(t *testing.T) {
 	}
 }
 
+func TestParseVoiceMessage(t *testing.T) {
+	cases := []struct {
+		in               string
+		wantNew, wantOld int
+	}{
+		{"2/1 (0/0)", 2, 1},
+		{"0/0 (0/0)", 0, 0},
+		{"5/3", 5, 3},
+		{"", 0, 0},
+		{"garbage", 0, 0},
+	}
+	for _, c := range cases {
+		n, o := parseVoiceMessage(c.in)
+		if n != c.wantNew || o != c.wantOld {
+			t.Errorf("parseVoiceMessage(%q) = %d/%d, want %d/%d", c.in, n, o, c.wantNew, c.wantOld)
+		}
+	}
+}
+
 func TestNormalize(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -60,6 +79,14 @@ func TestNormalize(t *testing.T) {
 			"Action": "add-member", "Conference-Name": "standup",
 		}, "conference", true, func(e Event) bool {
 			return e.Data["name"] == "standup" && e.Data["action"] == "add-member"
+		}},
+		{"message waiting", map[string]string{
+			"Event-Name": "MESSAGE_WAITING", "MWI-Messages-Waiting": "yes",
+			"MWI-Message-Account": "sip:1001@192.168.48.143", "MWI-Voice-Message": "2/1 (0/0)",
+		}, "voicemail.mwi", true, func(e Event) bool {
+			return e.Data["account"] == "1001@192.168.48.143" && e.Data["user"] == "1001" &&
+				e.Data["domain"] == "192.168.48.143" && e.Data["waiting"] == "yes" &&
+				e.Data["new"] == "2" && e.Data["saved"] == "1"
 		}},
 		{"ignored DTMF", map[string]string{"Event-Name": "DTMF"}, "", false, nil},
 		{"ignored custom subclass", map[string]string{

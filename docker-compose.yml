@@ -70,6 +70,12 @@ services:
       PROVISION_PASSWORD: ${PROVISION_PASSWORD:-}
       PROVISION_ALLOW_CIDRS: ${PROVISION_ALLOW_CIDRS:-}
       PROVISION_SIP_SERVER: ${PROVISION_SIP_SERVER:-}
+      # Voicemail MWI notifications on new voicemail (any sink set → enabled).
+      # Generic webhook (POST JSON) and/or Telegram bot.
+      VM_NOTIFY_WEBHOOK_URL: ${VM_NOTIFY_WEBHOOK_URL:-}
+      VM_NOTIFY_WEBHOOK_HEADER: ${VM_NOTIFY_WEBHOOK_HEADER:-}
+      VM_NOTIFY_TELEGRAM_TOKEN: ${VM_NOTIFY_TELEGRAM_TOKEN:-}
+      VM_NOTIFY_TELEGRAM_CHAT_ID: ${VM_NOTIFY_TELEGRAM_CHAT_ID:-}
     volumes:
       - ./deploy/tls:/tls:ro
     ports:

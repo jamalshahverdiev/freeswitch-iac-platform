@@ -530,9 +530,28 @@ curl -N --cacert deploy/tls/ca.crt -H "Authorization: Bearer $TOKEN" \
 
 Event types: `call.started` / `call.answered` / `call.ended`, `agent.status`
 (call-center agent), `queue.member` (queue join/leave/offer), `conference`
-(member add/del). Each is `{type, ts, data{...}}`. A `: ping` heartbeat is sent
-every 25 s. Returns 503 if the event stream is not enabled (ESL not
+(member add/del), `voicemail.mwi` (message-waiting; `data{account,user,domain,
+waiting,new,saved}`). Each is `{type, ts, data{...}}`. A `: ping` heartbeat is
+sent every 25 s. Returns 503 if the event stream is not enabled (ESL not
 configured).
+
+### Voicemail notifications (MWI push)
+
+On top of the SSE stream, the control-plane can **push a notification when a new
+voicemail arrives**. The same ESL listener receives FreeSWITCH `MESSAGE_WAITING`
+events; a notifier watches the per-mailbox **new** count and fires only when it
+*increases* (so MWI refreshes on phone re-registration don't spam). Sinks (any
+combination, enabled when set):
+
+- **Generic webhook** — `VM_NOTIFY_WEBHOOK_URL` (POST JSON), optional
+  `VM_NOTIFY_WEBHOOK_HEADER` (`"Key: Value"`). Payload:
+  `{"event":"voicemail.new","account","user","domain","new","saved","ts","message"}`.
+  Point it at Telegram/Slack/email-gateway/n8n/etc.
+- **Telegram** — `VM_NOTIFY_TELEGRAM_TOKEN` + `VM_NOTIFY_TELEGRAM_CHAT_ID`
+  (bot `sendMessage`).
+
+If no sink is configured the notifier is off (the `voicemail.mwi` SSE events
+still flow).
 
 > Browser note: `EventSource` cannot send an `Authorization` header, so a
 > browser client (see the wallboard below) reads this stream with `fetch()` +

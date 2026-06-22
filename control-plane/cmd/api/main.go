@@ -71,6 +71,18 @@ func main() {
 		go events.NewListener(cfg.ESLAddr, cfg.ESLPassword, hub, log).Run(listenerCtx)
 	}
 
+	// Voicemail MWI notifier: pushes a webhook/Telegram message on new voicemail.
+	// Subscribes to the same hub; only runs when a sink is configured.
+	notifier := events.NewNotifier(hub, events.NotifyConfig{
+		WebhookURL:    cfg.VMNotifyWebhookURL,
+		WebhookHeader: cfg.VMNotifyWebhookHeader,
+		TelegramToken: cfg.VMNotifyTelegramToken,
+		TelegramChat:  cfg.VMNotifyTelegramChat,
+	}, log)
+	if notifier.Enabled() {
+		go notifier.Run(listenerCtx)
+	}
+
 	tlsEnabled := cfg.TLSCertFile != "" && cfg.TLSKeyFile != ""
 	mtls := tlsEnabled && cfg.XMLClientCAFile != ""
 

@@ -160,6 +160,12 @@ func (s *Server) Router() http.Handler {
 
 		r.Get("/voicemail/{domain}/{number}", s.handleGetVoicemail)
 
+		r.Post("/operators", s.handleCreateOperator)
+		r.Get("/operators", s.handleListOperators)
+		r.Get("/operators/{subject}", s.handleGetOperator)
+		r.Put("/operators/{subject}", s.handleUpdateOperator)
+		r.Delete("/operators/{subject}", s.handleDeleteOperator)
+
 		r.Post("/gateways", s.handleCreateGateway)
 		r.Get("/gateways", s.handleListGateways)
 		r.Get("/gateways/{profile}/{name}", s.handleGetGateway)

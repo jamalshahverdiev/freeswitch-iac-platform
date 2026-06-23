@@ -461,6 +461,40 @@ and users without a password return **404**.
 
 ---
 
+## Operators (webphone identity binding)
+
+An **operator** binds a Keycloak identity (`subject`) to a SIP extension — the
+bridge between app login and telephony identity for the self-hosted webphone.
+The webphone's BFF, after validating the Keycloak JWT, looks up the operator by
+`subject` to resolve which extension the user registers as. **RBAC roles
+(agent/supervisor/admin) live in Keycloak (the JWT), not in this table** — the
+operator record is only the subject→extension mapping.
+
+```bash
+curl -s $API/api/v1/operators "${H[@]}" -d '{
+  "subject":"a1b2c3d4-…",   # Keycloak user `sub`
+  "domain":"192.168.48.143","number":"4201","display_name":"Reception"}'
+
+curl -s $API/api/v1/operators "${H[@]}"                 # list
+curl -s $API/api/v1/operators/a1b2c3d4-… "${H[@]}"      # get (by subject)
+curl -s -X PUT $API/api/v1/operators/a1b2c3d4-… "${H[@]}" -d '{"domain":"192.168.48.143","number":"4201"}'
+curl -s -X DELETE $API/api/v1/operators/a1b2c3d4-… "${H[@]}"
+```
+
+| field | type | required | notes |
+|---|---|---|---|
+| subject | string | yes | Keycloak `sub` (or username); unique |
+| domain | string | yes | SIP domain the extension lives in |
+| number | string | yes | SIP extension this identity registers as |
+| display_name | string | no | |
+| enabled | bool | no | default `true` |
+
+Managed as code via the Terraform resource `freeswitch_operator`. Keycloak itself
+can be IaC'd with `terraform-provider-keycloak`, keeping identities + roles as
+code too.
+
+---
+
 ## XML endpoints (consumed by `mod_xml_curl`)
 
 `mod_xml_curl` POSTs `application/x-www-form-urlencoded`. Behaviour:

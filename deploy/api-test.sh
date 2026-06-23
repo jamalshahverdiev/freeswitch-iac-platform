@@ -87,6 +87,18 @@ check "get user with voicemail -> 200" 200 "$CODE"; contains "vm email kept" '"e
 req GET  /api/v1/voicemail/demo.test/3001
 check "voicemail read -> 200" 200 "$CODE"; contains "mailbox has counters" '"unread":'; contains "mailbox messages array" '"messages":'
 
+echo "== operators (Keycloak subject -> extension binding) =="
+req POST /api/v1/operators '{"subject":"kc-demo-1","domain":"demo.test","number":"3001","display_name":"Agent One"}'
+check "create operator -> 201" 201 "$CODE"; contains "operator subject" '"subject":"kc-demo-1"'
+req POST /api/v1/operators '{"subject":"kc-demo-1","domain":"demo.test","number":"3001"}'; check "duplicate operator -> 409" 409 "$CODE"
+req POST /api/v1/operators '{"domain":"demo.test","number":"3001"}'; check "operator without subject -> 400" 400 "$CODE"
+req GET  /api/v1/operators/kc-demo-1;              check "get operator -> 200" 200 "$CODE"; contains "operator number" '"number":"3001"'
+req GET  /api/v1/operators;                        check "list operators -> 200" 200 "$CODE"
+req PUT  /api/v1/operators/kc-demo-1 '{"domain":"demo.test","number":"3001","display_name":"Reception","enabled":false}'
+check "update operator -> 200" 200 "$CODE"; contains "operator updated" 'Reception'
+req DELETE /api/v1/operators/kc-demo-1;            check "delete operator -> 204" 204 "$CODE"
+req GET  /api/v1/operators/kc-demo-1;              check "operator gone -> 404" 404 "$CODE"
+
 echo "== gateways CRUD =="
 req POST /api/v1/gateways '{"name":"test-trunk","profile":"external","proxy":"sip.example.com","username":"u","password":"s","register":true}'
 check "create gateway -> 201" 201 "$CODE"

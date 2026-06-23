@@ -9,3 +9,6 @@ CREATE DATABASE freeswitch_callcenter OWNER freeswitch;
 
 -- (reserved for the follow-up core-db migration)
 CREATE DATABASE freeswitch_core OWNER freeswitch;
+
+-- Keycloak (webphone identity provider) persistent store.
+CREATE DATABASE keycloak OWNER freeswitch;

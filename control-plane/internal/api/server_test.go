@@ -122,6 +122,8 @@ func TestValidationRejectsBeforeStore(t *testing.T) {
 		{"conf profile without name", http.MethodPost, "/api/v1/conference/profiles", `{"video_mode":"mux"}`},
 		{"conf room missing profile", http.MethodPost, "/api/v1/conference/rooms", `{"name":"r","number":"1","domain":"d","context":"c"}`},
 		{"user voicemail bad email", http.MethodPost, "/api/v1/users", `{"domain":"d","number":"1","voicemail":{"enabled":true,"email":"not-an-email"}}`},
+		{"operator without subject", http.MethodPost, "/api/v1/operators", `{"domain":"d","number":"1"}`},
+		{"operator without number", http.MethodPost, "/api/v1/operators", `{"subject":"s","domain":"d"}`},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

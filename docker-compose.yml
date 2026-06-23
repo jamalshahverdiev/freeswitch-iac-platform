@@ -117,6 +117,31 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Keycloak — identity provider (OIDC) for the webphone: authentication + RBAC
+  # roles. Persistent store in the `keycloak` Postgres DB. Realm/clients/roles are
+  # managed declaratively via terraform-provider-keycloak (deploy/keycloak/).
+  # Dev mode: http allowed; admin console at http://localhost:8081 (admin / pass).
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: ${POSTGRES_USER:-freeswitch}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-freeswitch}
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      # public base URL the SPA/BFF use to reach Keycloak (override in prod)
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-http://localhost:8081}
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   grafana_data:

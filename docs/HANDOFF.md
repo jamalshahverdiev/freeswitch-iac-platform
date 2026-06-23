@@ -222,6 +222,15 @@ grep "done playing file" /var/log/freeswitch/freeswitch.log
   notifier pushes to a generic webhook (`VM_NOTIFY_WEBHOOK_URL`) and/or Telegram
   on NEW-count increase (dedup). Live-verified via `voicemail_inject`. Control-
   plane only (no provider/table). Voicemail feature now fully complete (#1–#4).
+- **Webphone auth foundation (Phase 1.5) — branch `operators-keycloak`:** new
+  `operators` table (migration 000008) + `/api/v1/operators` CRUD + provider
+  resource/data-source `freeswitch_operator` (branch `operators` in the provider
+  repo) — maps a Keycloak `subject` → SIP extension (roles stay in Keycloak).
+  Plus a `keycloak` service in docker-compose (postgres-backed, :8081) and
+  `deploy/keycloak/` (terraform-provider-keycloak): realm `freeswitch`, PKCE
+  client `webphone`, roles agent/supervisor/admin. api-test 150. NEXT: the
+  webphone Go BFF (JWT validation + SIP-cred vending) + OIDC login in the SPA;
+  see the webphone repo PLAN.md §A.
 - **Phone provisioning DONE:** `provisioned_devices` (migration 000006) + CRUD
   `/api/v1/devices` (bearer) + phone-facing `GET /provision/{file}` (Basic auth
   `PROVISION_USER/PASSWORD` + `PROVISION_ALLOW_CIDRS`). Renders Yealink `.cfg`,

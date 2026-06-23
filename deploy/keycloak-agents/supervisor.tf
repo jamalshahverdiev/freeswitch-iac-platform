@@ -31,7 +31,7 @@ resource "freeswitch_operator" "super1" {
   subject      = keycloak_user.super1.id
   domain       = var.sip_domain
   number       = "4100"
-  display_name = "Super One"
+  display_name = "super1"
 }
 
 output "super1_subject" {

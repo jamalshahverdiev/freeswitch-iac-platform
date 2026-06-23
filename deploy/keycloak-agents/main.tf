@@ -68,7 +68,7 @@ resource "freeswitch_operator" "agent2" {
   subject      = keycloak_user.agent2.id
   domain       = var.sip_domain
   number       = "4202"
-  display_name = "Agent Two"
+  display_name = "agent2"
 }
 
 output "agent2_subject" {

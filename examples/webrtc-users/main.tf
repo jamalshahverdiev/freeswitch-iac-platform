@@ -59,6 +59,14 @@ resource "freeswitch_dialplan_extension" "internal_4xxx" {
     field      = "destination_number"
     expression = "^(4[0-9]{3})$"
 
+    # Pin MOH on both bridge legs (export → also the originated B-leg). Without
+    # this the global hold_music default isn't materialised on inbound WebRTC
+    # channels, so a hold by the callee left the caller hearing silence.
+    action {
+      application = "export"
+      data        = "hold_music=local_stream://moh"
+    }
+
     action {
       application = "bridge"
       data        = "user/$1@${local.domain}"

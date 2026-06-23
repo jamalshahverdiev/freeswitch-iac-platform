@@ -28,3 +28,8 @@ variable "agent2_password" {
   default   = "agent2"
   sensitive = true
 }
+variable "super1_password" {
+  type      = string
+  default   = "super1"
+  sensitive = true
+}

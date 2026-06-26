@@ -179,6 +179,7 @@ func normalize(m map[string]string) (Event, bool) {
 	case "CHANNEL_HANGUP_COMPLETE":
 		return Event{Type: "call.ended", Data: d(
 			"uuid", uuid, "cause", m["Hangup-Cause"],
+			"caller", m["Caller-Caller-ID-Number"], "destination", m["Caller-Destination-Number"],
 			"duration", m["variable_duration"], "billsec", m["variable_billsec"],
 		)}, true
 	case "MESSAGE_WAITING":

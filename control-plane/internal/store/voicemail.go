@@ -2,8 +2,10 @@ package store
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jamalshahverdiev/freeswitch-iac-platform/control-plane/internal/models"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -16,6 +18,22 @@ type VoicemailStore struct {
 
 func NewVoicemail(pool *pgxpool.Pool) *VoicemailStore {
 	return &VoicemailStore{pool: pool}
+}
+
+// MessageFilePath returns the on-disk file_path of one message in a user's
+// mailbox (matched by uuid), or "" if no such message. Used to stream the audio.
+func (s *VoicemailStore) MessageFilePath(ctx context.Context, domain, number, uuid string) (string, error) {
+	var fp string
+	err := s.pool.QueryRow(ctx, `
+		SELECT file_path FROM voicemail_msgs
+		WHERE domain = $1 AND username = $2 AND uuid = $3`, domain, number, uuid).Scan(&fp)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return fp, nil
 }
 
 // Messages returns a user's mailbox newest-first, with total/unread counters.

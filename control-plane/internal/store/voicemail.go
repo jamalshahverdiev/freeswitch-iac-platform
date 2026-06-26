@@ -10,8 +10,9 @@ import (
 )
 
 // VoicemailStore reads mod_voicemail's message store from the freeswitch_core
-// database. It is a SEPARATE pool from the control DB: this data is written by
-// FreeSWITCH, never by us, so we only ever issue SELECTs here.
+// database (a SEPARATE pool from the control DB). It is almost entirely SELECTs;
+// the one exception is MarkRead, which stamps read_epoch when a user listens to
+// a message from the webphone (there is no FS API to do this for odbc storage).
 type VoicemailStore struct {
 	pool *pgxpool.Pool
 }
@@ -34,6 +35,17 @@ func (s *VoicemailStore) MessageFilePath(ctx context.Context, domain, number, uu
 		return "", err
 	}
 	return fp, nil
+}
+
+// MarkRead stamps read_epoch (and read_flags) on a still-unread message in a
+// user's mailbox. Idempotent: a no-op if the message is missing or already read.
+func (s *VoicemailStore) MarkRead(ctx context.Context, domain, number, uuid string) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE voicemail_msgs
+		SET read_epoch = EXTRACT(EPOCH FROM now())::int, read_flags = 'B_READ'
+		WHERE domain = $1 AND username = $2 AND uuid = $3 AND read_epoch = 0`,
+		domain, number, uuid)
+	return err
 }
 
 // Messages returns a user's mailbox newest-first, with total/unread counters.

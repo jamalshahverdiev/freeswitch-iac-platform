@@ -80,3 +80,20 @@ func (s *Server) handleGetVoicemailAudio(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusOK)
 	_, _ = io.Copy(w, resp.Body)
 }
+
+// handleMarkVoicemailRead stamps a message as read (listened) in the caller's
+// mailbox. POST /api/v1/voicemail/{domain}/{number}/{uuid}/read
+func (s *Server) handleMarkVoicemailRead(w http.ResponseWriter, r *http.Request) {
+	if s.vmStore == nil {
+		writeError(w, http.StatusServiceUnavailable, "runtime_error", "voicemail read API is not configured (set CORE_DATABASE_URL)")
+		return
+	}
+	domain := chi.URLParam(r, "domain")
+	number := chi.URLParam(r, "number")
+	uuid := chi.URLParam(r, "uuid")
+	if err := s.vmStore.MarkRead(r.Context(), domain, number, uuid); err != nil {
+		writeError(w, http.StatusBadGateway, "runtime_error", err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

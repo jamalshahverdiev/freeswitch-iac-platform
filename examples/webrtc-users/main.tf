@@ -67,9 +67,37 @@ resource "freeswitch_dialplan_extension" "internal_4xxx" {
       data        = "hold_music=local_stream://moh"
     }
 
+    # Voicemail on no-answer: hang up after a completed call (no voicemail then),
+    # but on a failed bridge (no answer / unavailable / busy within the timeout)
+    # fall through to the voicemail deposit below.
+    action {
+      application = "set"
+      data        = "hangup_after_bridge=true"
+    }
+    action {
+      application = "set"
+      data        = "continue_on_fail=true"
+    }
+    action {
+      application = "set"
+      data        = "call_timeout=20"
+    }
+
     action {
       application = "bridge"
       data        = "user/$1@${local.domain}"
+    }
+
+    # Reached only when the bridge failed (continue_on_fail) — leave a message.
+    # Answer first (200 OK): the voicemail greeting would otherwise play as early
+    # media (183) which WebRTC clients like our SIP.js phone don't render, so the
+    # caller heard silence and hung up before the beep.
+    action {
+      application = "answer"
+    }
+    action {
+      application = "voicemail"
+      data        = "default ${local.domain} $1"
     }
   }
 }

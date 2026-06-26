@@ -159,6 +159,7 @@ func (s *Server) Router() http.Handler {
 		r.Delete("/users/{domain}/{number}", s.handleDeleteUser)
 
 		r.Get("/voicemail/{domain}/{number}", s.handleGetVoicemail)
+		r.Get("/voicemail/{domain}/{number}/{uuid}/audio", s.handleGetVoicemailAudio)
 
 		r.Post("/operators", s.handleCreateOperator)
 		r.Get("/operators", s.handleListOperators)

@@ -36,6 +36,7 @@ type Server struct {
 	provAllow    []*net.IPNet
 	provSIPServer string
 	provSIPPort   string
+	vapidPublic   string
 	log          *slog.Logger
 }
 
@@ -66,6 +67,9 @@ type Options struct {
 	ProvisionAllowCIDRs []string
 	ProvisionSIPServer  string
 	ProvisionSIPPort    string
+	// VAPIDPublicKey is exposed via GET /api/v1/push/vapid so browsers can
+	// subscribe to Web Push. Empty → push disabled (endpoint returns 503).
+	VAPIDPublicKey string
 }
 
 func NewServer(st *store.Store, au *audit.Recorder, esl *runtime.Client, opts Options, log *slog.Logger) *Server {
@@ -88,6 +92,7 @@ func NewServer(st *store.Store, au *audit.Recorder, esl *runtime.Client, opts Op
 		provPass:      opts.ProvisionPassword,
 		provSIPServer: opts.ProvisionSIPServer,
 		provSIPPort:   opts.ProvisionSIPPort,
+		vapidPublic:   opts.VAPIDPublicKey,
 		log:           log,
 	}
 	for _, c := range opts.XMLAllowCIDRs {
@@ -216,6 +221,10 @@ func (s *Server) Router() http.Handler {
 		r.Get("/cdr/stats", s.handleCDRStats)
 
 		r.Get("/events", s.handleEvents)
+
+		r.Get("/push/vapid", s.handlePushVAPID)
+		r.Post("/push/subscriptions", s.handlePushSubscribe)
+		r.Delete("/push/subscriptions", s.handlePushUnsubscribe)
 
 		r.Post("/devices", s.handleCreateDevice)
 		r.Get("/devices", s.handleListDevices)

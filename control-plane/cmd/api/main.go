@@ -79,6 +79,13 @@ func main() {
 		TelegramToken: cfg.VMNotifyTelegramToken,
 		TelegramChat:  cfg.VMNotifyTelegramChat,
 	}, log)
+	// Web Push sink (VAPID): notify a user's browsers on new voicemail even when
+	// the tab is closed. Stores subscriptions in the control database.
+	notifier.SetPush(events.NewWebPusher(events.WebPushConfig{
+		PublicKey:  cfg.VAPIDPublicKey,
+		PrivateKey: cfg.VAPIDPrivateKey,
+		Subject:    cfg.VAPIDSubject,
+	}, st, log))
 	if notifier.Enabled() {
 		go notifier.Run(listenerCtx)
 	}
@@ -104,6 +111,7 @@ func main() {
 		ProvisionAllowCIDRs:  cfg.ProvisionAllowCIDRs,
 		ProvisionSIPServer:   cfg.ProvisionSIPServer,
 		ProvisionSIPPort:     cfg.ProvisionSIPPort,
+		VAPIDPublicKey:       cfg.VAPIDPublicKey,
 	}, log)
 
 	httpServer := &http.Server{

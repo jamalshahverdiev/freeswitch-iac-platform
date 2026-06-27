@@ -26,11 +26,18 @@ type NotifyConfig struct {
 // Notifier subscribes to the Hub and pushes a notification when a user's NEW
 // voicemail count increases (a fresh message arrived). It dedupes per account so
 // MWI refreshes (e.g. phone re-subscribes) don't re-notify.
+// pusher delivers a Web Push to a user's browsers. Optional sink.
+type pusher interface {
+	Enabled() bool
+	SendToExtension(ctx context.Context, domain, number, title, body string)
+}
+
 type Notifier struct {
 	hub  *Hub
 	cfg  NotifyConfig
 	log  *slog.Logger
 	http *http.Client
+	push pusher
 
 	mu      sync.Mutex
 	lastNew map[string]int // account -> last observed new count
@@ -46,9 +53,18 @@ func NewNotifier(hub *Hub, cfg NotifyConfig, log *slog.Logger) *Notifier {
 	}
 }
 
+// SetPush attaches a Web Push sink. nil or a disabled pusher is ignored.
+func (n *Notifier) SetPush(p pusher) {
+	if p != nil && p.Enabled() {
+		n.push = p
+	}
+}
+
 // Enabled reports whether at least one sink is configured.
 func (n *Notifier) Enabled() bool {
-	return n.cfg.WebhookURL != "" || (n.cfg.TelegramToken != "" && n.cfg.TelegramChat != "")
+	return n.cfg.WebhookURL != "" ||
+		(n.cfg.TelegramToken != "" && n.cfg.TelegramChat != "") ||
+		n.push != nil
 }
 
 // Run subscribes to the hub and notifies on new voicemail until ctx is done.
@@ -98,6 +114,10 @@ func (n *Notifier) handle(ctx context.Context, e Event) {
 	}
 	if n.cfg.TelegramToken != "" && n.cfg.TelegramChat != "" {
 		go n.sendTelegram(ctx, msg)
+	}
+	if n.push != nil {
+		body := fmt.Sprintf("%d new message(s)", newC)
+		go n.push.SendToExtension(ctx, e.Data["domain"], e.Data["user"], "New voicemail", body)
 	}
 }
 

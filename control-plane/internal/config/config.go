@@ -89,8 +89,10 @@ func Load() (Config, error) {
 		VMNotifyWebhookHeader: env("VM_NOTIFY_WEBHOOK_HEADER", ""),
 		VMNotifyTelegramToken: env("VM_NOTIFY_TELEGRAM_TOKEN", ""),
 		VMNotifyTelegramChat:  env("VM_NOTIFY_TELEGRAM_CHAT_ID", ""),
-		VAPIDPublicKey:  env("VAPID_PUBLIC_KEY", "BLSZ-dqPA6CFYKa5IYjFxnPrLfKJ6NYE8qNdJmB9BMtf2fKFfTMotSwZlLvongoL30hjEOSSh-S_mCptWboczEQ"),
-		VAPIDPrivateKey: env("VAPID_PRIVATE_KEY", "HOxYhYM0nwtmBOA0dh5X7wa8AfqmFULUfahWRhjsiSM"),
+		// VAPID keys are env-only (never hardcode the private key — it's a secret).
+		// Generate a pair with webpush.GenerateVAPIDKeys(); both unset → push off.
+		VAPIDPublicKey:  env("VAPID_PUBLIC_KEY", ""),
+		VAPIDPrivateKey: env("VAPID_PRIVATE_KEY", ""),
 		VAPIDSubject:    env("VAPID_SUBJECT", "mailto:admin@example.com"),
 	}
 	if cfg.DatabaseURL == "" {

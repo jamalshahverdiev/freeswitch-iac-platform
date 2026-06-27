@@ -52,6 +52,12 @@ type Config struct {
 	VMNotifyWebhookHeader string // optional extra header, "Key: Value"
 	VMNotifyTelegramToken string
 	VMNotifyTelegramChat  string
+
+	// Web Push (VAPID). Both keys set → server-initiated push enabled; the
+	// public key is exposed to browsers so they can subscribe.
+	VAPIDPublicKey  string
+	VAPIDPrivateKey string
+	VAPIDSubject    string // contact URL, "mailto:..." or "https://..."
 }
 
 func Load() (Config, error) {
@@ -83,6 +89,9 @@ func Load() (Config, error) {
 		VMNotifyWebhookHeader: env("VM_NOTIFY_WEBHOOK_HEADER", ""),
 		VMNotifyTelegramToken: env("VM_NOTIFY_TELEGRAM_TOKEN", ""),
 		VMNotifyTelegramChat:  env("VM_NOTIFY_TELEGRAM_CHAT_ID", ""),
+		VAPIDPublicKey:  env("VAPID_PUBLIC_KEY", "BLSZ-dqPA6CFYKa5IYjFxnPrLfKJ6NYE8qNdJmB9BMtf2fKFfTMotSwZlLvongoL30hjEOSSh-S_mCptWboczEQ"),
+		VAPIDPrivateKey: env("VAPID_PRIVATE_KEY", "HOxYhYM0nwtmBOA0dh5X7wa8AfqmFULUfahWRhjsiSM"),
+		VAPIDSubject:    env("VAPID_SUBJECT", "mailto:admin@example.com"),
 	}
 	if cfg.DatabaseURL == "" {
 		return cfg, fmt.Errorf("DATABASE_URL is required")

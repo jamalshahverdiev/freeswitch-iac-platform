@@ -332,11 +332,24 @@ func TestRecordings(t *testing.T) {
 	})
 
 	t.Run("proxies listing", func(t *testing.T) {
+		// The listing endpoint walks the year/month/day tree, so the backend
+		// serves a directory listing at each level and files at the leaf.
 		backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if u, p, _ := r.BasicAuth(); u != "u" || p != "p" {
 				t.Errorf("missing basic auth on proxied request")
 			}
-			w.Write([]byte(`[{"name":"a.wav","type":"file","mtime":"m","size":5}]`))
+			switch r.URL.Path {
+			case "/":
+				w.Write([]byte(`[{"name":"2026","type":"directory","mtime":"m","size":0}]`))
+			case "/2026/":
+				w.Write([]byte(`[{"name":"06","type":"directory","mtime":"m","size":0}]`))
+			case "/2026/06/":
+				w.Write([]byte(`[{"name":"04","type":"directory","mtime":"m","size":0}]`))
+			case "/2026/06/04/":
+				w.Write([]byte(`[{"name":"a.wav","type":"file","mtime":"m","size":5}]`))
+			default:
+				w.WriteHeader(http.StatusNotFound)
+			}
 		}))
 		defer backend.Close()
 		h := testServer(t, Options{RecURL: backend.URL, RecUser: "u", RecPassword: "p"})

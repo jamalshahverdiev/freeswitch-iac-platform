@@ -83,6 +83,30 @@ resource "freeswitch_dialplan_extension" "internal_4xxx" {
       data        = "call_timeout=20"
     }
 
+    # Record the conversation. record_session runs on the B-leg (callee) right
+    # before the bridge connects (bridge_pre_execute_bleg_*), so recording starts
+    # at answer with no ringback and no race with the inbound A-leg's answer. The
+    # file name encodes both parties + uuid so the control-plane can scope "my
+    # recordings" per extension: <caller>_<dest>_<uuid>.wav under the per-day tree
+    # in $${recordings_dir}. $$ escapes Terraform interpolation so the ${...}
+    # reach FreeSWITCH verbatim.
+    action {
+      application = "set"
+      data        = "RECORD_STEREO=true"
+    }
+    action {
+      application = "set"
+      data        = "recording_follow_transfer=true"
+    }
+    # Direct record_session on the A-leg before bridge: attaches a media bug now,
+    # captures once media flows (post-bridge), and the file name resolves from the
+    # A-leg's clean values (caller 4201, destination 4202) rather than the
+    # originated B-leg's opaque contact token.
+    action {
+      application = "record_session"
+      data        = "/var/lib/freeswitch/recordings/$${strftime(%Y/%m/%d)}/$${caller_id_number}_$${destination_number}_$${uuid}.wav"
+    }
+
     action {
       application = "bridge"
       data        = "user/$1@${local.domain}"
